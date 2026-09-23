@@ -1,0 +1,6 @@
+{
+  "name": "Sistem Informasi Database & Manajemen Yayasan",
+  "description": "Aplikasi database yayasan terintegrasi untuk pengelolaan data aset, pegawai, peserta didik, serta laporan kinerja admin dengan sinkronisasi otomatis dan dasbor analitik real-time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
