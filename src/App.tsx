@@ -67,7 +67,9 @@ import {
   pushAllDataToSheets,
   pullAllDataFromSheets,
   upsertItemToSheets,
-  deleteItemFromSheets
+  deleteItemFromSheets,
+  fetchRemoteSheetsConfig,
+  saveSheetsConfig
 } from "./lib/sheets";
 
 export default function App() {
@@ -235,9 +237,21 @@ export default function App() {
       if (serverData) {
         setData(serverData);
         setLastSyncTime(new Date().toISOString());
+        // If server already has the single spreadsheet configured, adopt it immediately
+        if (serverData.sheetsConfig?.webAppUrl) {
+          saveSheetsConfig(serverData.sheetsConfig.webAppUrl, serverData.sheetsConfig.sheetDocUrl, serverData.sheetsConfig.autoSync);
+        }
       }
 
-      // Automatically sync latest cloud state from Google Sheets on startup
+      // If not configured yet, attempt to fetch remote shared config from server
+      if (!isSheetsConfigured()) {
+        const remoteCfg = await fetchRemoteSheetsConfig();
+        if (remoteCfg?.webAppUrl) {
+          saveSheetsConfig(remoteCfg.webAppUrl, remoteCfg.sheetDocUrl, remoteCfg.autoSync);
+        }
+      }
+
+      // Automatically sync latest cloud state from the single Google Spreadsheet on startup
       if (isSheetsConfigured() && isSheetsAutoSyncEnabled()) {
         try {
           setIsSheetsSyncing(true);

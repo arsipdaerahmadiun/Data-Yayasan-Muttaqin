@@ -5,7 +5,17 @@ export const SHEETS_URL_KEY = "google_sheets_webapp_url";
 export const SHEETS_DOC_URL_KEY = "google_sheets_doc_url";
 export const SHEETS_AUTO_SYNC_KEY = "google_sheets_auto_sync";
 
+// In-memory cache for fast access across devices
+let inMemoryConfig: { webAppUrl: string; sheetDocUrl: string; autoSync: boolean } | null = null;
+
 export function getStoredSheetsConfig() {
+  if (inMemoryConfig && inMemoryConfig.webAppUrl) {
+    return {
+      webAppUrl: inMemoryConfig.webAppUrl.trim(),
+      sheetDocUrl: (inMemoryConfig.sheetDocUrl || "").trim()
+    };
+  }
+
   const metaEnv = (import.meta as any).env || {};
   const envUrl = (metaEnv.VITE_GOOGLE_SHEETS_URL as string) || "";
   const envDocUrl = (metaEnv.VITE_GOOGLE_SHEETS_DOC_URL as string) || "";
@@ -25,6 +35,9 @@ export function isSheetsConfigured(): boolean {
 }
 
 export function isSheetsAutoSyncEnabled(): boolean {
+  if (inMemoryConfig && inMemoryConfig.autoSync !== undefined) {
+    return inMemoryConfig.autoSync;
+  }
   try {
     const saved = localStorage.getItem(SHEETS_AUTO_SYNC_KEY);
     if (saved === null) return true; // Default is true (automatic sync)
@@ -35,18 +48,92 @@ export function isSheetsAutoSyncEnabled(): boolean {
 }
 
 export function setSheetsAutoSyncEnabled(enabled: boolean): void {
+  if (!inMemoryConfig) {
+    inMemoryConfig = { ...getStoredSheetsConfig(), autoSync: enabled };
+  } else {
+    inMemoryConfig.autoSync = enabled;
+  }
+
   try {
     localStorage.setItem(SHEETS_AUTO_SYNC_KEY, String(enabled));
   } catch (err) {
-    console.warn("Failed to set google_sheets_auto_sync:", err);
+    console.warn("Failed to set google_sheets_auto_sync in localStorage:", err);
   }
+
+  // Persist to server so other devices get this setting
+  try {
+    fetch("/api/sheets/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ autoSync: enabled })
+    }).catch(() => {});
+  } catch {}
 }
 
-export function saveSheetsConfig(webAppUrl: string, sheetDocUrl?: string): void {
-  localStorage.setItem(SHEETS_URL_KEY, webAppUrl.trim());
-  if (sheetDocUrl !== undefined) {
-    localStorage.setItem(SHEETS_DOC_URL_KEY, sheetDocUrl.trim());
+export function saveSheetsConfig(webAppUrl: string, sheetDocUrl?: string, autoSync?: boolean): void {
+  const cleanUrl = (webAppUrl || "").trim();
+  const cleanDocUrl = (sheetDocUrl !== undefined ? sheetDocUrl : (getStoredSheetsConfig().sheetDocUrl || "")).trim();
+  const cleanAutoSync = autoSync !== undefined ? autoSync : isSheetsAutoSyncEnabled();
+
+  inMemoryConfig = {
+    webAppUrl: cleanUrl,
+    sheetDocUrl: cleanDocUrl,
+    autoSync: cleanAutoSync
+  };
+
+  try {
+    localStorage.setItem(SHEETS_URL_KEY, cleanUrl);
+    localStorage.setItem(SHEETS_DOC_URL_KEY, cleanDocUrl);
+    localStorage.setItem(SHEETS_AUTO_SYNC_KEY, String(cleanAutoSync));
+  } catch (e) {
+    console.warn("Failed to save sheets config to localStorage:", e);
   }
+
+  // Sync to server so any other device gets this spreadsheet automatically!
+  try {
+    fetch("/api/sheets/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        webAppUrl: cleanUrl,
+        sheetDocUrl: cleanDocUrl,
+        autoSync: cleanAutoSync
+      })
+    }).catch((err) => {
+      console.warn("Could not save sheets config to server:", err);
+    });
+  } catch {}
+}
+
+/**
+ * Fetches the central 1-Spreadsheet configuration from server.
+ * This guarantees any device opening the app automatically uses the same spreadsheet without manual input.
+ */
+export async function fetchRemoteSheetsConfig(): Promise<{ webAppUrl: string; sheetDocUrl: string; autoSync: boolean } | null> {
+  try {
+    const res = await fetch("/api/sheets/config");
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (json.success && json.config) {
+      const { webAppUrl, sheetDocUrl, autoSync } = json.config;
+      if (webAppUrl && typeof webAppUrl === "string" && webAppUrl.startsWith("http")) {
+        inMemoryConfig = {
+          webAppUrl: webAppUrl.trim(),
+          sheetDocUrl: (sheetDocUrl || "").trim(),
+          autoSync: autoSync !== undefined ? autoSync : true
+        };
+        try {
+          localStorage.setItem(SHEETS_URL_KEY, inMemoryConfig.webAppUrl);
+          localStorage.setItem(SHEETS_DOC_URL_KEY, inMemoryConfig.sheetDocUrl);
+          localStorage.setItem(SHEETS_AUTO_SYNC_KEY, String(inMemoryConfig.autoSync));
+        } catch {}
+        return inMemoryConfig;
+      }
+    }
+  } catch (err) {
+    console.warn("Could not fetch remote sheets config:", err);
+  }
+  return null;
 }
 
 export function validateSheetsUrl(url: string): { valid: boolean; warning?: string; error?: string } {

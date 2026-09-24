@@ -39,7 +39,8 @@ import {
   isSheetsAutoSyncEnabled,
   setSheetsAutoSyncEnabled,
   validateSheetsUrl,
-  diagnoseSheetsConnection
+  diagnoseSheetsConnection,
+  fetchRemoteSheetsConfig
 } from "../lib/sheets";
 
 interface GoogleSheetsSyncCardProps {
@@ -85,11 +86,33 @@ export const GoogleSheetsSyncCard: React.FC<GoogleSheetsSyncCardProps> = ({ full
   // Real-time URL feedback
   const urlValidation = validateSheetsUrl(webAppUrl);
 
-  // Initial connection test on mount if URL exists
+  // Initial connection test on mount & fetch shared remote spreadsheet config
   useEffect(() => {
-    if (webAppUrl) {
-      handleSilentCheck();
+    async function initCheck() {
+      // 1. If we already have local config, test it
+      if (webAppUrl) {
+        handleSilentCheck();
+      }
+
+      // 2. Fetch shared single spreadsheet config from server database
+      try {
+        const remote = await fetchRemoteSheetsConfig();
+        if (remote && remote.webAppUrl) {
+          setWebAppUrl(remote.webAppUrl);
+          if (remote.sheetDocUrl) setSheetDocUrl(remote.sheetDocUrl);
+          if (remote.autoSync !== undefined) setIsAutoSync(remote.autoSync);
+
+          const res = await testSheetsConnection(remote.webAppUrl);
+          setIsConnected(res.success);
+          if (res.sheetTitle) setSheetTitle(res.sheetTitle);
+          if (res.sheetDocUrl && !sheetDocUrl) setSheetDocUrl(res.sheetDocUrl);
+        }
+      } catch (e) {
+        console.warn("Silent remote config check:", e);
+      }
     }
+
+    initCheck();
   }, []);
 
   const handleSilentCheck = async () => {
@@ -142,11 +165,11 @@ export const GoogleSheetsSyncCard: React.FC<GoogleSheetsSyncCardProps> = ({ full
   };
 
   const handleSaveConfig = async () => {
-    saveSheetsConfig(webAppUrl, sheetDocUrl);
+    saveSheetsConfig(webAppUrl, sheetDocUrl, isAutoSync);
 
     setBanner({
       type: "info",
-      message: "Menyimpan konfigurasi dan memverifikasi koneksi Google Spreadsheet..."
+      message: "Menyimpan konfigurasi 1 Spreadsheet ke server dan memverifikasi koneksi..."
     });
 
     try {
@@ -159,8 +182,8 @@ export const GoogleSheetsSyncCard: React.FC<GoogleSheetsSyncCardProps> = ({ full
       if (res.success) {
         setBanner({
           type: "success",
-          title: "Koneksi Google Spreadsheet Berhasil",
-          message: `Berhasil terhubung ke file: "${res.sheetTitle || 'Google Spreadsheet Yayasan'}". Sistem siap digunakan!`
+          title: "1 Google Spreadsheet Berhasil Dihubungkan",
+          message: `Berhasil terhubung ke file: "${res.sheetTitle || 'Google Spreadsheet Yayasan'}". Konfigurasi telah disimpan ke server sehingga seluruh perangkat (HP, laptop, tablet) langsung tersinkron ke dokumen yang sama tanpa perlu input URL lagi!`
         });
       } else {
         setBanner({
@@ -654,6 +677,16 @@ export const GoogleSheetsSyncCard: React.FC<GoogleSheetsSyncCardProps> = ({ full
               <Code2 className="w-3.5 h-3.5" />
               <span>Salin Skrip Apps Script</span>
             </button>
+          </div>
+
+          <div className="p-3 bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-start gap-2.5 text-xs text-emerald-900 dark:text-emerald-200">
+            <Sparkles className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">1 Spreadsheet untuk Seluruh Perangkat:</span>
+              <p className="mt-0.5 text-[11px] text-emerald-800 dark:text-emerald-300 leading-relaxed">
+                Anda hanya perlu menyimpan URL skrip ini <strong>satu kali</strong>. Tautan otomatis tersimpan di server secara global. Saat Anda membuka web ini dari smartphone, tablet, atau laptop lain, semua perangkat langsung sinkron ke Google Spreadsheet yang sama tanpa perlu memasukkan link lagi!
+              </p>
+            </div>
           </div>
 
           <div className="space-y-3 text-xs">

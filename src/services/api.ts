@@ -1269,7 +1269,8 @@ export async function fetchServerDatabase(): Promise<DatabaseStore | null> {
         assetTransfers: reconciled.transfers,
         borrowedDocs: Array.isArray(json.data.borrowedDocs)
           ? json.data.borrowedDocs
-          : DEFAULT_DATABASE.borrowedDocs
+          : DEFAULT_DATABASE.borrowedDocs,
+        sheetsConfig: json.data.sheetsConfig
       };
       saveLocalDatabase(cleanedData);
       return cleanedData;

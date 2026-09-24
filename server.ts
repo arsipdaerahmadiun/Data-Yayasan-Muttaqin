@@ -578,14 +578,40 @@ function getDatabase() {
   try {
     if (fs.existsSync(DB_FILE)) {
       const data = fs.readFileSync(DB_FILE, "utf-8");
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      // Ensure sheetsConfig exists and inherits environment variables if not yet set
+      const envSheetsUrl = process.env.GOOGLE_SHEETS_URL || process.env.VITE_GOOGLE_SHEETS_URL || "";
+      const envDocUrl = process.env.GOOGLE_SHEETS_DOC_URL || process.env.VITE_GOOGLE_SHEETS_DOC_URL || "";
+      if (!parsed.sheetsConfig) {
+        parsed.sheetsConfig = {
+          webAppUrl: envSheetsUrl,
+          sheetDocUrl: envDocUrl,
+          autoSync: true
+        };
+      } else {
+        if (!parsed.sheetsConfig.webAppUrl && envSheetsUrl) {
+          parsed.sheetsConfig.webAppUrl = envSheetsUrl;
+        }
+        if (!parsed.sheetsConfig.sheetDocUrl && envDocUrl) {
+          parsed.sheetsConfig.sheetDocUrl = envDocUrl;
+        }
+      }
+      return parsed;
     }
   } catch (err) {
     console.error("Error reading database file, using fallback:", err);
   }
   // Initialize file with default dataset
-  fs.writeFileSync(DB_FILE, JSON.stringify(INITIAL_DATABASE, null, 2), "utf-8");
-  return INITIAL_DATABASE;
+  const initDb = {
+    ...INITIAL_DATABASE,
+    sheetsConfig: {
+      webAppUrl: process.env.GOOGLE_SHEETS_URL || process.env.VITE_GOOGLE_SHEETS_URL || "",
+      sheetDocUrl: process.env.GOOGLE_SHEETS_DOC_URL || process.env.VITE_GOOGLE_SHEETS_DOC_URL || "",
+      autoSync: true
+    }
+  };
+  fs.writeFileSync(DB_FILE, JSON.stringify(initDb, null, 2), "utf-8");
+  return initDb;
 }
 
 // Helper to write database
@@ -611,6 +637,53 @@ app.get("/api/db", (req, res) => {
     data: db,
     serverTime: new Date().toISOString()
   });
+});
+
+// 1b. Single Master Spreadsheet Configuration (Shared across all devices)
+app.get("/api/sheets/config", (req, res) => {
+  const db = getDatabase();
+  const envSheetsUrl = process.env.GOOGLE_SHEETS_URL || process.env.VITE_GOOGLE_SHEETS_URL || "";
+  const envDocUrl = process.env.GOOGLE_SHEETS_DOC_URL || process.env.VITE_GOOGLE_SHEETS_DOC_URL || "";
+
+  const config = db.sheetsConfig || {
+    webAppUrl: envSheetsUrl,
+    sheetDocUrl: envDocUrl,
+    autoSync: true
+  };
+
+  res.json({
+    success: true,
+    config
+  });
+});
+
+app.post("/api/sheets/config", (req, res) => {
+  try {
+    const { webAppUrl, sheetDocUrl, autoSync } = req.body;
+    const currentDb = getDatabase();
+
+    const cleanUrl = typeof webAppUrl === "string" ? webAppUrl.trim() : (currentDb.sheetsConfig?.webAppUrl || "");
+    const cleanDoc = typeof sheetDocUrl === "string" ? sheetDocUrl.trim() : (currentDb.sheetsConfig?.sheetDocUrl || "");
+    const cleanSync = typeof autoSync === "boolean" ? autoSync : (currentDb.sheetsConfig?.autoSync ?? true);
+
+    currentDb.sheetsConfig = {
+      webAppUrl: cleanUrl,
+      sheetDocUrl: cleanDoc,
+      autoSync: cleanSync,
+      lastSyncedAt: new Date().toISOString()
+    };
+
+    saveDatabase(currentDb);
+
+    return res.json({
+      success: true,
+      message: "Konfigurasi 1 Google Spreadsheet berhasil disimpan untuk seluruh perangkat.",
+      config: currentDb.sheetsConfig
+    });
+  } catch (err: any) {
+    console.error("Error saving sheets config:", err);
+    return res.status(500).json({ success: false, message: err.message || "Gagal menyimpan konfigurasi" });
+  }
 });
 
 // 2. Sync database payload from client
@@ -648,7 +721,8 @@ app.post("/api/db/sync", (req, res) => {
         },
         ...(currentDb.syncHistory || []).slice(0, 30)
       ],
-      auditLogs: incomingData.auditLogs || currentDb.auditLogs
+      auditLogs: incomingData.auditLogs || currentDb.auditLogs,
+      sheetsConfig: incomingData.sheetsConfig || currentDb.sheetsConfig
     };
 
     saveDatabase(updatedDb);

@@ -299,6 +299,13 @@ export interface MeetingRecord {
   status: 'Selesai' | 'Dalam Proses' | 'Belum Dimulai';
 }
 
+export interface SheetsConfig {
+  webAppUrl: string;
+  sheetDocUrl?: string;
+  autoSync?: boolean;
+  lastSyncedAt?: string;
+}
+
 export interface DatabaseStore {
   donations: DonationRecord[];
   profile: FoundationProfile;
@@ -311,6 +318,7 @@ export interface DatabaseStore {
   syncHistory: SyncHistoryItem[];
   auditLogs: AuditLogItem[];
   meetings: MeetingRecord[];
+  sheetsConfig?: SheetsConfig;
 }
 
 export type ActiveTab = 'dashboard' | 'assets' | 'employees' | 'students' | 'alumni' | 'donations' | 'meetings' | 'admin-performance' | 'ai-assistant' | 'settings';
