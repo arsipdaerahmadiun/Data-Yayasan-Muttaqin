@@ -1,4 +1,5 @@
 import { DatabaseStore, AssetItem, EmployeeItem, StudentItem, DonationRecord, FoundationProfile, AssetTransferRecord } from "../types";
+import { sanitizeTransfers, sanitizeBorrowedDocs } from "../services/api";
 
 // Default local storage keys for Google Sheets
 export const SHEETS_URL_KEY = "google_sheets_webapp_url";
@@ -483,8 +484,8 @@ export async function pullAllDataFromSheets(
         employees: Array.isArray(incoming.employees) ? incoming.employees : undefined,
         students: Array.isArray(incoming.students) ? incoming.students : undefined,
         donations: Array.isArray(incoming.donations) ? incoming.donations : undefined,
-        assetTransfers: Array.isArray(incoming.assetTransfers) ? incoming.assetTransfers : undefined,
-        borrowedDocs: Array.isArray(incoming.borrowedDocs) ? incoming.borrowedDocs : undefined,
+        assetTransfers: Array.isArray(incoming.assetTransfers) ? sanitizeTransfers(incoming.assetTransfers) : undefined,
+        borrowedDocs: Array.isArray(incoming.borrowedDocs) ? sanitizeBorrowedDocs(incoming.borrowedDocs) : undefined,
         meetings: Array.isArray(incoming.meetings) ? incoming.meetings : undefined
       };
 

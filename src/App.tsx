@@ -258,16 +258,17 @@ export default function App() {
           const sheetsRes = await pullAllDataFromSheets();
           if (sheetsRes.success && sheetsRes.data) {
             setData((prev) => {
+              const d = sheetsRes.data!;
               const merged: DatabaseStore = {
                 ...prev,
-                profile: sheetsRes.data!.profile ? { ...prev.profile, ...sheetsRes.data!.profile } : prev.profile,
-                assets: sheetsRes.data!.assets && sheetsRes.data!.assets.length > 0 ? sheetsRes.data!.assets : prev.assets,
-                employees: sheetsRes.data!.employees && sheetsRes.data!.employees.length > 0 ? sheetsRes.data!.employees : prev.employees,
-                students: sheetsRes.data!.students && sheetsRes.data!.students.length > 0 ? sheetsRes.data!.students : prev.students,
-                donations: sheetsRes.data!.donations && sheetsRes.data!.donations.length > 0 ? sheetsRes.data!.donations : prev.donations,
-                assetTransfers: sheetsRes.data!.assetTransfers && sheetsRes.data!.assetTransfers.length > 0 ? sheetsRes.data!.assetTransfers : (prev.assetTransfers || []),
-                borrowedDocs: sheetsRes.data!.borrowedDocs && sheetsRes.data!.borrowedDocs.length > 0 ? sheetsRes.data!.borrowedDocs : (prev.borrowedDocs || []),
-                meetings: sheetsRes.data!.meetings && sheetsRes.data!.meetings.length > 0 ? sheetsRes.data!.meetings : (prev.meetings || [])
+                profile: d.profile ? { ...prev.profile, ...d.profile } : prev.profile,
+                assets: Array.isArray(d.assets) ? d.assets : prev.assets,
+                employees: Array.isArray(d.employees) ? d.employees : prev.employees,
+                students: Array.isArray(d.students) ? d.students : prev.students,
+                donations: Array.isArray(d.donations) ? d.donations : prev.donations,
+                assetTransfers: Array.isArray(d.assetTransfers) ? d.assetTransfers : (prev.assetTransfers || []),
+                borrowedDocs: Array.isArray(d.borrowedDocs) ? d.borrowedDocs : (prev.borrowedDocs || []),
+                meetings: Array.isArray(d.meetings) ? d.meetings : (prev.meetings || [])
               };
               saveLocalDatabase(merged);
               return merged;
@@ -432,8 +433,13 @@ export default function App() {
 
       if (!isTarget) return a;
 
+      const toOwnerStr = transfer.toOwner != null ? String(transfer.toOwner).trim() : "";
+      const docNumStr = transfer.docNumber != null ? String(transfer.docNumber).trim() : "";
+      const fromOwnerStr = transfer.fromOwner != null ? String(transfer.fromOwner).trim() : "";
+      const docTypeStr = transfer.docType != null ? String(transfer.docType).trim() : "";
+
       if (transfer.status === "Selesai / Terbit Sertifikat") {
-        const targetOwner = transfer.toOwner?.trim() || a.registeredOwner || "YAYASAN PONDOK PESANTREN MUTTAQIN JOSENAN MADIUN";
+        const targetOwner = toOwnerStr || a.registeredOwner || "YAYASAN PONDOK PESANTREN MUTTAQIN JOSENAN MADIUN";
         const updatedName = formatAssetNameWithNewOwner(a.name, targetOwner);
         
         return {
@@ -441,15 +447,15 @@ export default function App() {
           name: updatedName,
           registeredOwner: targetOwner,
           custodian: a.custodian && a.custodian.toLowerCase().includes("yayasan") ? a.custodian : targetOwner,
-          originalOwner: transfer.fromOwner || a.originalOwner,
+          originalOwner: fromOwnerStr || a.originalOwner,
           transferStatus: "Selesai Balik Nama (a.n. Yayasan)",
-          legalDocType: transfer.docType || a.legalDocType,
-          legalDocNumber: transfer.docNumber?.trim() ? transfer.docNumber.trim() : a.legalDocNumber
+          legalDocType: (docTypeStr as any) || a.legalDocType,
+          legalDocNumber: docNumStr || a.legalDocNumber
         };
       } else if (transfer.status === "Proses BPN / Notaris") {
         return {
           ...a,
-          originalOwner: transfer.fromOwner || a.originalOwner,
+          originalOwner: fromOwnerStr || a.originalOwner,
           transferStatus: "Dalam Proses BPN / Notaris"
         };
       } else if (
@@ -458,13 +464,13 @@ export default function App() {
       ) {
         return {
           ...a,
-          originalOwner: transfer.fromOwner || a.originalOwner,
+          originalOwner: fromOwnerStr || a.originalOwner,
           transferStatus: "Verifikasi Dokumen & Pengukuran"
         };
       } else if (transfer.status === "Tertunda") {
         return {
           ...a,
-          originalOwner: transfer.fromOwner || a.originalOwner,
+          originalOwner: fromOwnerStr || a.originalOwner,
           transferStatus: "Belum Balik Nama (a.n. Pemilik Lama/Pewakif)"
         };
       }

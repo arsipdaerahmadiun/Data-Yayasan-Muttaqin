@@ -281,14 +281,17 @@ export const GoogleSheetsSyncCard: React.FC<GoogleSheetsSyncCardProps> = ({ full
       const res = await pullAllDataFromSheets(webAppUrl);
       if (res.success && res.data) {
         setIsConnected(true);
+        const d = res.data;
         const mergedData: DatabaseStore = {
           ...fullData,
-          profile: res.data.profile ? { ...fullData.profile, ...res.data.profile } : fullData.profile,
-          assets: res.data.assets && res.data.assets.length > 0 ? res.data.assets : fullData.assets,
-          employees: res.data.employees && res.data.employees.length > 0 ? res.data.employees : fullData.employees,
-          students: res.data.students && res.data.students.length > 0 ? res.data.students : fullData.students,
-          donations: res.data.donations && res.data.donations.length > 0 ? res.data.donations : fullData.donations,
-          assetTransfers: res.data.assetTransfers && res.data.assetTransfers.length > 0 ? res.data.assetTransfers : (fullData.assetTransfers || [])
+          profile: d.profile ? { ...fullData.profile, ...d.profile } : fullData.profile,
+          assets: Array.isArray(d.assets) ? d.assets : fullData.assets,
+          employees: Array.isArray(d.employees) ? d.employees : fullData.employees,
+          students: Array.isArray(d.students) ? d.students : fullData.students,
+          donations: Array.isArray(d.donations) ? d.donations : fullData.donations,
+          assetTransfers: Array.isArray(d.assetTransfers) ? d.assetTransfers : (fullData.assetTransfers || []),
+          borrowedDocs: Array.isArray(d.borrowedDocs) ? d.borrowedDocs : (fullData.borrowedDocs || []),
+          meetings: Array.isArray(d.meetings) ? d.meetings : (fullData.meetings || [])
         };
 
         onRestoreData(mergedData);

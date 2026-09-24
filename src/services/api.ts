@@ -975,9 +975,71 @@ export function sanitizeAssets(assets: any[]): AssetItem[] {
       let cat = asset.category;
       if (cat === "Kendaraan Operasional") cat = "Kendaraan";
       if (cat === "Bangunan & Gedung") cat = "Bangunan";
-      return { ...asset, category: cat };
+      return { 
+        ...asset, 
+        category: cat,
+        legalDocNumber: asset.legalDocNumber != null ? String(asset.legalDocNumber).trim() : (asset.legalDocNumber || "")
+      };
     })
     .filter(asset => asset.category === "Tanah" || asset.category === "Kendaraan" || asset.category === "Bangunan");
+}
+
+export function sanitizeTransfers(transfers: any[]): AssetTransferRecord[] {
+  if (!Array.isArray(transfers)) return [];
+  return transfers.map(t => {
+    if (!t || typeof t !== "object") return t;
+    return {
+      ...t,
+      id: String(t.id || ""),
+      assetId: String(t.assetId || ""),
+      assetCode: String(t.assetCode || ""),
+      assetName: String(t.assetName || ""),
+      category: t.category || "Tanah",
+      fromOwner: t.fromOwner != null ? String(t.fromOwner).trim() : "",
+      toOwner: t.toOwner != null ? String(t.toOwner).trim() : "",
+      docType: t.docType != null ? String(t.docType).trim() : "",
+      docNumber: t.docNumber != null ? String(t.docNumber).trim() : "",
+      notaryOffice: t.notaryOffice != null ? String(t.notaryOffice).trim() : "",
+      submissionDate: t.submissionDate != null ? String(t.submissionDate).trim() : "",
+      targetDate: t.targetDate != null ? String(t.targetDate).trim() : "",
+      completionDate: t.completionDate != null ? String(t.completionDate).trim() : undefined,
+      status: t.status || "Verifikasi Dokumen",
+      progressPercent: Number(t.progressPercent) || 0,
+      estimatedCost: Number(t.estimatedCost) || 0,
+      handlerName: t.handlerName != null ? String(t.handlerName).trim() : "",
+      notes: t.notes != null ? String(t.notes).trim() : "",
+      logs: Array.isArray(t.logs) ? t.logs : []
+    };
+  });
+}
+
+export function sanitizeBorrowedDocs(docs: any[]): any[] {
+  if (!Array.isArray(docs)) return [];
+  return docs.map(b => {
+    if (!b || typeof b !== "object") return b;
+    return {
+      ...b,
+      id: String(b.id || ""),
+      assetId: String(b.assetId || ""),
+      assetCode: String(b.assetCode || ""),
+      assetName: String(b.assetName || ""),
+      docTitle: b.docTitle != null ? String(b.docTitle).trim() : "",
+      docNumber: b.docNumber != null ? String(b.docNumber).trim() : "",
+      borrowerName: b.borrowerName != null ? String(b.borrowerName).trim() : "",
+      borrowerRole: b.borrowerRole != null ? String(b.borrowerRole).trim() : "",
+      borrowerPhone: b.borrowerPhone != null ? String(b.borrowerPhone).trim() : "",
+      borrowDate: b.borrowDate != null ? String(b.borrowDate).trim() : "",
+      dueDate: b.dueDate != null ? String(b.dueDate).trim() : "",
+      returnDate: b.returnDate != null ? String(b.returnDate).trim() : undefined,
+      actualReturnDate: b.actualReturnDate != null ? String(b.actualReturnDate).trim() : undefined,
+      expectedReturnDate: b.expectedReturnDate != null ? String(b.expectedReturnDate).trim() : undefined,
+      purpose: b.purpose != null ? String(b.purpose).trim() : "",
+      status: b.status || "Dipinjam",
+      approvedBy: b.approvedBy != null ? String(b.approvedBy).trim() : "",
+      handoverOfficer: b.handoverOfficer != null ? String(b.handoverOfficer).trim() : "",
+      notes: b.notes != null ? String(b.notes).trim() : ""
+    };
+  });
 }
 
 // Strictly allowed standard classes by level
@@ -1159,8 +1221,9 @@ export function reconcileTransfersWithAssets(
     return { assets: assets || [], transfers: transfers || [] };
   }
 
+  const cleanTransfers = sanitizeTransfers(transfers);
   let updatedAssets = [...(assets || [])];
-  let updatedTransfers = transfers.map(t => {
+  let updatedTransfers = cleanTransfers.map(t => {
     if (t.status === "Selesai / Terbit Sertifikat" && t.toOwner) {
       const newName = formatAssetNameWithNewOwner(t.assetName, t.toOwner);
       return { ...t, assetName: newName };
@@ -1171,6 +1234,8 @@ export function reconcileTransfersWithAssets(
   updatedTransfers.forEach(transfer => {
     if (transfer.status === "Selesai / Terbit Sertifikat" && transfer.toOwner) {
       const targetOwner = String(transfer.toOwner || "").trim();
+      const docNumStr = transfer.docNumber != null ? String(transfer.docNumber).trim() : "";
+
       updatedAssets = updatedAssets.map(a => {
         if (!matchAssetWithTransfer(a, transfer)) return a;
         
@@ -1183,7 +1248,7 @@ export function reconcileTransfersWithAssets(
           originalOwner: transfer.fromOwner || a.originalOwner,
           transferStatus: "Selesai Balik Nama (a.n. Yayasan)",
           legalDocType: transfer.docType || a.legalDocType,
-          legalDocNumber: transfer.docNumber?.trim() ? transfer.docNumber.trim() : a.legalDocNumber
+          legalDocNumber: docNumStr || a.legalDocNumber
         };
       });
     }
@@ -1200,7 +1265,7 @@ export function loadLocalDatabase(): DatabaseStore {
       const parsed = JSON.parse(saved);
       const cleanedAssets = sanitizeAssets(parsed.assets || DEFAULT_DATABASE.assets);
       const cleanedStudents = sanitizeStudents(parsed.students || DEFAULT_DATABASE.students);
-      const rawTransfers = Array.isArray(parsed.assetTransfers) ? parsed.assetTransfers : DEFAULT_DATABASE.assetTransfers;
+      const rawTransfers = sanitizeTransfers(Array.isArray(parsed.assetTransfers) ? parsed.assetTransfers : DEFAULT_DATABASE.assetTransfers);
       
       const reconciled = reconcileTransfersWithAssets(
         cleanedAssets.length > 0 ? cleanedAssets : DEFAULT_DATABASE.assets,
@@ -1212,7 +1277,7 @@ export function loadLocalDatabase(): DatabaseStore {
         ...parsed,
         assets: reconciled.assets,
         assetTransfers: reconciled.transfers,
-        borrowedDocs: Array.isArray(parsed.borrowedDocs) ? parsed.borrowedDocs : DEFAULT_DATABASE.borrowedDocs,
+        borrowedDocs: sanitizeBorrowedDocs(Array.isArray(parsed.borrowedDocs) ? parsed.borrowedDocs : DEFAULT_DATABASE.borrowedDocs),
         employees: parsed.employees || DEFAULT_DATABASE.employees,
         students: cleanedStudents.length > 0 ? cleanedStudents : DEFAULT_DATABASE.students,
         adminReport: parsed.adminReport || DEFAULT_DATABASE.adminReport,
@@ -1235,11 +1300,13 @@ export function loadLocalDatabase(): DatabaseStore {
 
 export function saveLocalDatabase(data: DatabaseStore) {
   try {
-    const reconciled = reconcileTransfersWithAssets(data.assets, data.assetTransfers || []);
+    const rawTransfers = sanitizeTransfers(data.assetTransfers || []);
+    const reconciled = reconcileTransfersWithAssets(data.assets, rawTransfers);
     const cleanedData: DatabaseStore = {
       ...data,
       assets: sanitizeAssets(reconciled.assets),
       assetTransfers: reconciled.transfers,
+      borrowedDocs: sanitizeBorrowedDocs(data.borrowedDocs || []),
       students: sanitizeStudents(data.students)
     };
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cleanedData));
