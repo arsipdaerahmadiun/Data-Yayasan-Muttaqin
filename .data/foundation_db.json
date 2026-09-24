@@ -293,7 +293,7 @@
       "fromOwner": "Fahmi Maulana",
       "toOwner": "YAYASAN PONDOK PESANTREN MUTTAQIN JOSENAN MADIUN",
       "docType": "Sertifikat Hak Milik (SHM)",
-      "docNumber": 1234,
+      "docNumber": "1234",
       "notaryOffice": "Kantor Pertanahan BPN / Notaris PPAT",
       "submissionDate": "2026-09-22T17:00:00.000Z",
       "targetDate": "2026-11-21T17:00:00.000Z",
@@ -317,11 +317,13 @@
       "borrowerName": "Hj. Ratna, S.H., M.Kn.",
       "borrowerRole": "Notaris & PPAT Mitra Yayasan",
       "borrowerPhone": "0812-3344-5566",
-      "borrowDate": "2026-08-10",
-      "dueDate": "2026-09-15",
+      "borrowDate": "2026-08-09T17:00:00.000Z",
+      "dueDate": "2026-09-14T17:00:00.000Z",
+      "expectedReturnDate": "2026-09-14T17:00:00.000Z",
       "purpose": "Validasi kelengkapan berkas fisik untuk proses pendaftaran sertifikat di Kantor Pertanahan BPN",
       "status": "Dipinjam",
       "approvedBy": "Drs. H. Ahmad Fauzan, M.Pd. (Ketua Yayasan)",
+      "handoverOfficer": "",
       "notes": "Dilengkapi Berita Acara Serah Terima (BAST) peminjaman dokumen nomor BAST/08/2026/04."
     },
     {
@@ -334,11 +336,13 @@
       "borrowerName": "Pak Joko Suwandi",
       "borrowerRole": "Staf Sarpras & Driver Operasional",
       "borrowerPhone": "0877-6655-4433",
-      "borrowDate": "2026-08-25",
-      "dueDate": "2026-09-05",
+      "borrowDate": "2026-08-24T17:00:00.000Z",
+      "dueDate": "2026-09-04T17:00:00.000Z",
+      "expectedReturnDate": "2026-09-04T17:00:00.000Z",
       "purpose": "Pengurusan perpanjangan STNK dan cek fisik kendaraan di Kantor Samsat",
       "status": "Dipinjam",
       "approvedBy": "Fahmi Maulana Dwi, S.Kom. (Admin Database)",
+      "handoverOfficer": "",
       "notes": "Disertai tanda terima resmi peminjaman BPKB."
     },
     {
@@ -351,12 +355,15 @@
       "borrowerName": "Ir. Hendro Prasetyo",
       "borrowerRole": "Konsultan Arsitek Renovasi Lab",
       "borrowerPhone": "0818-7788-9900",
-      "borrowDate": "2026-07-15",
-      "dueDate": "2026-08-01",
-      "returnDate": "2026-07-28",
+      "borrowDate": "2026-07-14T17:00:00.000Z",
+      "dueDate": "2026-07-31T17:00:00.000Z",
+      "expectedReturnDate": "2026-07-31T17:00:00.000Z",
+      "returnDate": "2026-07-27T17:00:00.000Z",
+      "actualReturnDate": "2026-07-27T17:00:00.000Z",
       "purpose": "Studi kelayakan penambahan partisi akustik ruang multimedia lantai 2",
       "status": "Dikembalikan",
       "approvedBy": "Ustadz Budi Utomo (Sarpras)",
+      "handoverOfficer": "",
       "notes": "Dokumen telah dikembalikan dalam kondisi lengkap dan baik."
     }
   ],
@@ -374,9 +381,9 @@
   ],
   "meetings": [],
   "sheetsConfig": {
-    "webAppUrl": "",
-    "sheetDocUrl": "",
+    "webAppUrl": "https://script.google.com/macros/s/AKfycbzPeClSNHrpNqp67hHrnEWIxdmJLG9ON8LRo02kQyzzZC3eyXkhZJpHHNjvU7GQCTM/exec",
+    "sheetDocUrl": "https://docs.google.com/spreadsheets/d/1hPpJ7h30ffh8yL_E7E3_WNXp4gj-HGgTDAZ5DLmYP8A/edit",
     "autoSync": true,
-    "lastSyncedAt": "2026-09-23T14:16:23.703Z"
+    "lastSyncedAt": "2026-09-24T06:26:07.144Z"
   }
 }

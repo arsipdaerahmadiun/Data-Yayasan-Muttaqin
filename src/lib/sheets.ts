@@ -1,5 +1,6 @@
 import { DatabaseStore, AssetItem, EmployeeItem, StudentItem, DonationRecord, FoundationProfile, AssetTransferRecord } from "../types";
 import { sanitizeTransfers, sanitizeBorrowedDocs } from "../services/api";
+import { MASTER_SHEETS_CONFIG } from "../config/sheetsMasterConfig";
 
 // Default local storage keys for Google Sheets
 export const SHEETS_URL_KEY = "google_sheets_webapp_url";
@@ -10,10 +11,13 @@ export const SHEETS_AUTO_SYNC_KEY = "google_sheets_auto_sync";
 let inMemoryConfig: { webAppUrl: string; sheetDocUrl: string; autoSync: boolean } | null = null;
 
 export function getStoredSheetsConfig() {
+  const masterUrl = (MASTER_SHEETS_CONFIG.webAppUrl || "").trim();
+  const masterDocUrl = (MASTER_SHEETS_CONFIG.sheetDocUrl || "").trim();
+
   if (inMemoryConfig && inMemoryConfig.webAppUrl) {
     return {
       webAppUrl: inMemoryConfig.webAppUrl.trim(),
-      sheetDocUrl: (inMemoryConfig.sheetDocUrl || "").trim()
+      sheetDocUrl: (inMemoryConfig.sheetDocUrl || masterDocUrl).trim()
     };
   }
 
@@ -21,8 +25,27 @@ export function getStoredSheetsConfig() {
   const envUrl = (metaEnv.VITE_GOOGLE_SHEETS_URL as string) || "";
   const envDocUrl = (metaEnv.VITE_GOOGLE_SHEETS_DOC_URL as string) || "";
 
-  const savedUrl = localStorage.getItem(SHEETS_URL_KEY) || envUrl || "";
-  const savedDocUrl = localStorage.getItem(SHEETS_DOC_URL_KEY) || envDocUrl || "";
+  let savedUrl = localStorage.getItem(SHEETS_URL_KEY) || "";
+  let savedDocUrl = localStorage.getItem(SHEETS_DOC_URL_KEY) || "";
+
+  // If master config is provided, prioritize it or override stale /dev cached URLs
+  if (masterUrl && (!savedUrl || savedUrl.endsWith("/dev") || !savedUrl.startsWith("http"))) {
+    savedUrl = masterUrl;
+    try {
+      localStorage.setItem(SHEETS_URL_KEY, masterUrl);
+    } catch {}
+  } else if (!savedUrl) {
+    savedUrl = masterUrl || envUrl || "";
+  }
+
+  if (masterDocUrl && (!savedDocUrl || !savedDocUrl.startsWith("http"))) {
+    savedDocUrl = masterDocUrl;
+    try {
+      localStorage.setItem(SHEETS_DOC_URL_KEY, masterDocUrl);
+    } catch {}
+  } else if (!savedDocUrl) {
+    savedDocUrl = masterDocUrl || envDocUrl || "";
+  }
 
   return {
     webAppUrl: savedUrl.trim(),
@@ -137,10 +160,10 @@ export async function fetchRemoteSheetsConfig(): Promise<{ webAppUrl: string; sh
   return null;
 }
 
-export function validateSheetsUrl(url: string): { valid: boolean; warning?: string; error?: string } {
+export function validateSheetsUrl(url: string, isTouched: boolean = false): { valid: boolean; warning?: string; error?: string } {
   const trimmed = (url || "").trim();
   if (!trimmed) {
-    return { valid: false, error: "URL belum diisi." };
+    return { valid: false, error: isTouched ? "URL belum diisi." : undefined };
   }
 
   if (trimmed.includes("docs.google.com/spreadsheets")) {
@@ -179,6 +202,65 @@ export function validateSheetsUrl(url: string): { valid: boolean; warning?: stri
   }
 
   return { valid: true };
+}
+
+/**
+ * Automatically detects device pairing or sync query parameters in the URL:
+ * e.g. https://domain.com/?sheetsUrl=https%3A%2F%2Fscript.google.com%2F...
+ * Saves them immediately to local storage and synchronizes to server.
+ */
+export function checkUrlSyncParams(): { connected: boolean; webAppUrl?: string } {
+  if (typeof window === "undefined") return { connected: false };
+  try {
+    const url = new URL(window.location.href);
+    let webAppUrl = url.searchParams.get("sheetsUrl") || url.searchParams.get("webapp") || "";
+    let sheetDocUrl = url.searchParams.get("sheetDocUrl") || url.searchParams.get("docUrl") || "";
+
+    // Check hash as fallback (#sheetsUrl=...)
+    if (!webAppUrl && window.location.hash) {
+      const hashStr = window.location.hash.replace(/^#/, "");
+      const hashParams = new URLSearchParams(hashStr);
+      webAppUrl = hashParams.get("sheetsUrl") || hashParams.get("webapp") || "";
+      sheetDocUrl = hashParams.get("sheetDocUrl") || hashParams.get("docUrl") || "";
+    }
+
+    if (webAppUrl && webAppUrl.startsWith("http")) {
+      saveSheetsConfig(webAppUrl, sheetDocUrl, true);
+
+      // Clean query params from URL bar so the link stays tidy without refreshing
+      url.searchParams.delete("sheetsUrl");
+      url.searchParams.delete("webapp");
+      url.searchParams.delete("sheetDocUrl");
+      url.searchParams.delete("docUrl");
+      const cleanPath = url.pathname + (url.search ? url.search : "");
+      window.history.replaceState({}, document.title, cleanPath);
+
+      return { connected: true, webAppUrl };
+    }
+  } catch (err) {
+    console.warn("Error reading URL sync params:", err);
+  }
+  return { connected: false };
+}
+
+/**
+ * Generates an instant device-pairing link that contains the spreadsheet connection.
+ * When opened on another smartphone/laptop, it automatically links to the same spreadsheet.
+ */
+export function generateDevicePairingUrl(customWebAppUrl?: string, customDocUrl?: string): string {
+  if (typeof window === "undefined") return "";
+  const cfg = getStoredSheetsConfig();
+  const targetWebApp = (customWebAppUrl || cfg.webAppUrl || "").trim();
+  const targetDoc = (customDocUrl || cfg.sheetDocUrl || "").trim();
+
+  if (!targetWebApp) return window.location.origin;
+
+  const url = new URL(window.location.origin + window.location.pathname);
+  url.searchParams.set("sheetsUrl", targetWebApp);
+  if (targetDoc) {
+    url.searchParams.set("sheetDocUrl", targetDoc);
+  }
+  return url.toString();
 }
 
 /**

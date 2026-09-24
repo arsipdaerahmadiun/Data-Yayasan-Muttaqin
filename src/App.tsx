@@ -69,7 +69,8 @@ import {
   upsertItemToSheets,
   deleteItemFromSheets,
   fetchRemoteSheetsConfig,
-  saveSheetsConfig
+  saveSheetsConfig,
+  checkUrlSyncParams
 } from "./lib/sheets";
 
 export default function App() {
@@ -233,6 +234,12 @@ export default function App() {
   // Initial Fetch from Server & Google Sheets (runs strictly once on mount)
   useEffect(() => {
     async function initFetch() {
+      // 0. Check if this device was opened via an instant pairing link (QR Code / shared URL)
+      const paired = checkUrlSyncParams();
+      if (paired.connected) {
+        showToast("Perangkat berhasil dihubungkan ke Google Spreadsheet! Memuat data terbaru...");
+      }
+
       const serverData = await fetchServerDatabase();
       if (serverData) {
         setData(serverData);

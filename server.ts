@@ -4,6 +4,7 @@ import fs from "fs";
 
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { MASTER_SHEETS_CONFIG } from "./src/config/sheetsMasterConfig";
 
 dotenv.config();
 
@@ -15,9 +16,37 @@ app.use(express.json({ limit: "20mb" }));
 // Server-side data directory for durable persistence
 const DATA_DIR = process.env.VERCEL ? "/tmp" : path.join(process.cwd(), ".data");
 const DB_FILE = path.join(DATA_DIR, "foundation_db.json");
+const SHEETS_CONFIG_FILE = path.join(DATA_DIR, "sheets_config.json");
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+// Helpers for persistent Google Sheets configuration across devices and deployments
+function getPersistentSheetsConfig(): { webAppUrl: string; sheetDocUrl: string; autoSync: boolean; lastSyncedAt?: string } | null {
+  try {
+    if (fs.existsSync(SHEETS_CONFIG_FILE)) {
+      const content = fs.readFileSync(SHEETS_CONFIG_FILE, "utf-8");
+      const parsed = JSON.parse(content);
+      if (parsed && typeof parsed.webAppUrl === "string" && parsed.webAppUrl.trim().startsWith("http")) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn("Could not read sheets_config.json:", e);
+  }
+  return null;
+}
+
+function savePersistentSheetsConfig(config: any): void {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(SHEETS_CONFIG_FILE, JSON.stringify(config, null, 2), "utf-8");
+  } catch (e) {
+    console.warn("Could not write sheets_config.json:", e);
+  }
 }
 
 // Initial mock dataset if database file doesn't exist
@@ -582,18 +611,28 @@ function getDatabase() {
       // Ensure sheetsConfig exists and inherits environment variables if not yet set
       const envSheetsUrl = process.env.GOOGLE_SHEETS_URL || process.env.VITE_GOOGLE_SHEETS_URL || "";
       const envDocUrl = process.env.GOOGLE_SHEETS_DOC_URL || process.env.VITE_GOOGLE_SHEETS_DOC_URL || "";
+      const persistentSheets = getPersistentSheetsConfig();
+      const masterUrl = (MASTER_SHEETS_CONFIG?.webAppUrl || "").trim();
+      const masterDoc = (MASTER_SHEETS_CONFIG?.sheetDocUrl || "").trim();
+
       if (!parsed.sheetsConfig) {
         parsed.sheetsConfig = {
-          webAppUrl: envSheetsUrl,
-          sheetDocUrl: envDocUrl,
-          autoSync: true
+          webAppUrl: persistentSheets?.webAppUrl || masterUrl || envSheetsUrl,
+          sheetDocUrl: persistentSheets?.sheetDocUrl || masterDoc || envDocUrl,
+          autoSync: persistentSheets?.autoSync ?? MASTER_SHEETS_CONFIG?.autoSync ?? true
         };
       } else {
-        if (!parsed.sheetsConfig.webAppUrl && envSheetsUrl) {
-          parsed.sheetsConfig.webAppUrl = envSheetsUrl;
-        }
-        if (!parsed.sheetsConfig.sheetDocUrl && envDocUrl) {
-          parsed.sheetsConfig.sheetDocUrl = envDocUrl;
+        if (persistentSheets && persistentSheets.webAppUrl) {
+          parsed.sheetsConfig.webAppUrl = persistentSheets.webAppUrl;
+          if (persistentSheets.sheetDocUrl) parsed.sheetsConfig.sheetDocUrl = persistentSheets.sheetDocUrl;
+          if (persistentSheets.autoSync !== undefined) parsed.sheetsConfig.autoSync = persistentSheets.autoSync;
+        } else {
+          if (!parsed.sheetsConfig.webAppUrl && (masterUrl || envSheetsUrl)) {
+            parsed.sheetsConfig.webAppUrl = masterUrl || envSheetsUrl;
+          }
+          if (!parsed.sheetsConfig.sheetDocUrl && (masterDoc || envDocUrl)) {
+            parsed.sheetsConfig.sheetDocUrl = masterDoc || envDocUrl;
+          }
         }
       }
       return parsed;
@@ -602,12 +641,15 @@ function getDatabase() {
     console.error("Error reading database file, using fallback:", err);
   }
   // Initialize file with default dataset
+  const persistentSheets = getPersistentSheetsConfig();
+  const masterUrl = (MASTER_SHEETS_CONFIG?.webAppUrl || "").trim();
+  const masterDoc = (MASTER_SHEETS_CONFIG?.sheetDocUrl || "").trim();
   const initDb = {
     ...INITIAL_DATABASE,
     sheetsConfig: {
-      webAppUrl: process.env.GOOGLE_SHEETS_URL || process.env.VITE_GOOGLE_SHEETS_URL || "",
-      sheetDocUrl: process.env.GOOGLE_SHEETS_DOC_URL || process.env.VITE_GOOGLE_SHEETS_DOC_URL || "",
-      autoSync: true
+      webAppUrl: persistentSheets?.webAppUrl || masterUrl || process.env.GOOGLE_SHEETS_URL || process.env.VITE_GOOGLE_SHEETS_URL || "",
+      sheetDocUrl: persistentSheets?.sheetDocUrl || masterDoc || process.env.GOOGLE_SHEETS_DOC_URL || process.env.VITE_GOOGLE_SHEETS_DOC_URL || "",
+      autoSync: persistentSheets?.autoSync ?? MASTER_SHEETS_CONFIG?.autoSync ?? true
     }
   };
   fs.writeFileSync(DB_FILE, JSON.stringify(initDb, null, 2), "utf-8");
@@ -642,13 +684,17 @@ app.get("/api/db", (req, res) => {
 // 1b. Single Master Spreadsheet Configuration (Shared across all devices)
 app.get("/api/sheets/config", (req, res) => {
   const db = getDatabase();
+  const persistentSheets = getPersistentSheetsConfig();
+  const masterUrl = (MASTER_SHEETS_CONFIG?.webAppUrl || "").trim();
+  const masterDoc = (MASTER_SHEETS_CONFIG?.sheetDocUrl || "").trim();
   const envSheetsUrl = process.env.GOOGLE_SHEETS_URL || process.env.VITE_GOOGLE_SHEETS_URL || "";
   const envDocUrl = process.env.GOOGLE_SHEETS_DOC_URL || process.env.VITE_GOOGLE_SHEETS_DOC_URL || "";
 
-  const config = db.sheetsConfig || {
-    webAppUrl: envSheetsUrl,
-    sheetDocUrl: envDocUrl,
-    autoSync: true
+  const config = {
+    webAppUrl: persistentSheets?.webAppUrl || db.sheetsConfig?.webAppUrl || masterUrl || envSheetsUrl,
+    sheetDocUrl: persistentSheets?.sheetDocUrl || db.sheetsConfig?.sheetDocUrl || masterDoc || envDocUrl,
+    autoSync: persistentSheets?.autoSync ?? db.sheetsConfig?.autoSync ?? MASTER_SHEETS_CONFIG?.autoSync ?? true,
+    lastSyncedAt: persistentSheets?.lastSyncedAt || db.sheetsConfig?.lastSyncedAt || new Date().toISOString()
   };
 
   res.json({
@@ -661,19 +707,30 @@ app.post("/api/sheets/config", (req, res) => {
   try {
     const { webAppUrl, sheetDocUrl, autoSync } = req.body;
     const currentDb = getDatabase();
+    const existing = getPersistentSheetsConfig() || currentDb.sheetsConfig || {};
 
-    const cleanUrl = typeof webAppUrl === "string" ? webAppUrl.trim() : (currentDb.sheetsConfig?.webAppUrl || "");
-    const cleanDoc = typeof sheetDocUrl === "string" ? sheetDocUrl.trim() : (currentDb.sheetsConfig?.sheetDocUrl || "");
-    const cleanSync = typeof autoSync === "boolean" ? autoSync : (currentDb.sheetsConfig?.autoSync ?? true);
+    const cleanUrl = (typeof webAppUrl === "string" && webAppUrl.trim().startsWith("http"))
+      ? webAppUrl.trim()
+      : (existing.webAppUrl || "");
+    const cleanDoc = typeof sheetDocUrl === "string"
+      ? sheetDocUrl.trim()
+      : (existing.sheetDocUrl || "");
+    const cleanSync = typeof autoSync === "boolean"
+      ? autoSync
+      : (existing.autoSync ?? true);
 
-    currentDb.sheetsConfig = {
+    const updatedConfig = {
       webAppUrl: cleanUrl,
       sheetDocUrl: cleanDoc,
       autoSync: cleanSync,
       lastSyncedAt: new Date().toISOString()
     };
 
+    currentDb.sheetsConfig = updatedConfig;
     saveDatabase(currentDb);
+    if (cleanUrl) {
+      savePersistentSheetsConfig(updatedConfig);
+    }
 
     return res.json({
       success: true,
@@ -695,6 +752,17 @@ app.post("/api/db/sync", (req, res) => {
     }
 
     const currentDb = getDatabase();
+    const persistentConfig = getPersistentSheetsConfig() || currentDb.sheetsConfig || { webAppUrl: "", sheetDocUrl: "", autoSync: true };
+
+    let resolvedSheetsConfig = persistentConfig;
+    if (incomingData.sheetsConfig && typeof incomingData.sheetsConfig.webAppUrl === "string" && incomingData.sheetsConfig.webAppUrl.trim().startsWith("http")) {
+      resolvedSheetsConfig = {
+        ...persistentConfig,
+        ...incomingData.sheetsConfig,
+        webAppUrl: incomingData.sheetsConfig.webAppUrl.trim()
+      };
+      savePersistentSheetsConfig(resolvedSheetsConfig);
+    }
     
     // Merge updates cleanly
     const updatedDb = {
@@ -722,7 +790,7 @@ app.post("/api/db/sync", (req, res) => {
         ...(currentDb.syncHistory || []).slice(0, 30)
       ],
       auditLogs: incomingData.auditLogs || currentDb.auditLogs,
-      sheetsConfig: incomingData.sheetsConfig || currentDb.sheetsConfig
+      sheetsConfig: resolvedSheetsConfig
     };
 
     saveDatabase(updatedDb);

@@ -25,8 +25,14 @@ import {
   ShieldAlert,
   Search,
   ArrowRight,
-  Info
+  Info,
+  QrCode,
+  Smartphone,
+  Laptop,
+  ClipboardPaste,
+  Share2
 } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 import { DatabaseStore } from "../types";
 import { 
   getStoredSheetsConfig, 
@@ -40,7 +46,8 @@ import {
   setSheetsAutoSyncEnabled,
   validateSheetsUrl,
   diagnoseSheetsConnection,
-  fetchRemoteSheetsConfig
+  fetchRemoteSheetsConfig,
+  generateDevicePairingUrl
 } from "../lib/sheets";
 
 interface GoogleSheetsSyncCardProps {
@@ -61,6 +68,12 @@ export const GoogleSheetsSyncCard: React.FC<GoogleSheetsSyncCardProps> = ({ full
   const [isPulling, setIsPulling] = useState(false);
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [lastSyncedTime, setLastSyncedTime] = useState<string | null>(null);
+
+  // Multi-device sharing & QR code modal
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [copiedPairingUrl, setCopiedPairingUrl] = useState(false);
+  const [isUrlTouched, setIsUrlTouched] = useState(false);
+  const [pasteSuccess, setPasteSuccess] = useState(false);
 
   // Diagnostic states
   const [isDiagnosing, setIsDiagnosing] = useState(false);
@@ -83,8 +96,8 @@ export const GoogleSheetsSyncCard: React.FC<GoogleSheetsSyncCardProps> = ({ full
   const [showScriptModal, setShowScriptModal] = useState(false);
   const [scriptCopied, setScriptCopied] = useState(false);
 
-  // Real-time URL feedback
-  const urlValidation = validateSheetsUrl(webAppUrl);
+  // Real-time URL feedback (softened on initial empty load)
+  const urlValidation = validateSheetsUrl(webAppUrl, isUrlTouched);
 
   // Initial connection test on mount & fetch shared remote spreadsheet config
   useEffect(() => {
@@ -164,7 +177,39 @@ export const GoogleSheetsSyncCard: React.FC<GoogleSheetsSyncCardProps> = ({ full
     }
   };
 
+  const handlePasteFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && text.trim()) {
+        const trimmed = text.trim();
+        setIsUrlTouched(true);
+        if (trimmed.includes("script.google.com/macros/s/")) {
+          setWebAppUrl(trimmed);
+          setPasteSuccess(true);
+          setTimeout(() => setPasteSuccess(false), 2000);
+        } else if (trimmed.includes("docs.google.com/spreadsheets")) {
+          setSheetDocUrl(trimmed);
+          setPasteSuccess(true);
+          setTimeout(() => setPasteSuccess(false), 2000);
+        } else {
+          setWebAppUrl(trimmed);
+        }
+      }
+    } catch (err) {
+      console.warn("Clipboard read error:", err);
+    }
+  };
+
+  const handleCopyPairingUrl = () => {
+    const url = generateDevicePairingUrl(webAppUrl, sheetDocUrl);
+    if (!url) return;
+    navigator.clipboard.writeText(url);
+    setCopiedPairingUrl(true);
+    setTimeout(() => setCopiedPairingUrl(false), 2500);
+  };
+
   const handleSaveConfig = async () => {
+    setIsUrlTouched(true);
     saveSheetsConfig(webAppUrl, sheetDocUrl, isAutoSync);
 
     setBanner({
@@ -692,32 +737,94 @@ export const GoogleSheetsSyncCard: React.FC<GoogleSheetsSyncCardProps> = ({ full
             </div>
           </div>
 
+          {/* Quick Multi-Device Connect Banner */}
+          <div className="p-3.5 bg-gradient-to-r from-blue-50/90 to-indigo-50/90 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200/90 dark:border-blue-800/80 rounded-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h5 className="font-bold text-blue-950 dark:text-blue-200 flex items-center gap-1.5 text-xs">
+                  <Smartphone className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <span>Sinkronisasi Antar Perangkat (HP / Laptop Lain)</span>
+                </h5>
+                <p className="text-[11px] text-blue-800 dark:text-blue-300 mt-0.5 leading-relaxed">
+                  {webAppUrl
+                    ? "Hubungkan smartphone Anda dalam hitungan detik via scan QR Code tanpa perlu mengetik ulang link panjang."
+                    : "Membuka di perangkat baru? Anda bisa scan QR Code dari perangkat utama atau tempel URL dari clipboard."}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+                {webAppUrl ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowQrModal(true)}
+                      className="flex-1 sm:flex-none px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                    >
+                      <QrCode className="w-3.5 h-3.5" />
+                      <span>Pindai QR di HP</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCopyPairingUrl}
+                      className="flex-1 sm:flex-none px-3 py-1.5 bg-white dark:bg-slate-800 border border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-slate-700 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                    >
+                      {copiedPairingUrl ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
+                      <span>{copiedPairingUrl ? "Tersalin!" : "Salin Link HP"}</span>
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handlePasteFromClipboard}
+                    className="flex-1 sm:flex-none px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <ClipboardPaste className="w-3.5 h-3.5" />
+                    <span>{pasteSuccess ? "Berhasil Ditempel!" : "Tempel URL dari Clipboard"}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-3 text-xs">
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-slate-700 dark:text-slate-300 font-medium">
                   Google Apps Script Web App URL <span className="text-rose-500">*</span>
                 </label>
-                {webAppUrl && (
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                    urlValidation.valid 
-                      ? "bg-emerald-100 text-emerald-800" 
-                      : urlValidation.error 
-                        ? "bg-rose-100 text-rose-800" 
-                        : "bg-amber-100 text-amber-800"
-                  }`}>
-                    {urlValidation.valid 
-                      ? "✓ Format URL Valid" 
-                      : urlValidation.error 
-                        ? "✕ Format Salah" 
-                        : "⚠️ Peringatan"}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePasteFromClipboard}
+                    className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <ClipboardPaste className="w-3 h-3" />
+                    <span>{pasteSuccess ? "Tersalin!" : "Tempel URL"}</span>
+                  </button>
+                  {webAppUrl && (
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      urlValidation.valid 
+                        ? "bg-emerald-100 text-emerald-800" 
+                        : urlValidation.error 
+                          ? "bg-rose-100 text-rose-800" 
+                          : "bg-amber-100 text-amber-800"
+                    }`}>
+                      {urlValidation.valid 
+                        ? "✓ Format URL Valid" 
+                        : urlValidation.error 
+                          ? "✕ Format Salah" 
+                          : "⚠️ Peringatan"}
+                    </span>
+                  )}
+                </div>
               </div>
               <input
                 type="text"
                 value={webAppUrl}
-                onChange={(e) => setWebAppUrl(e.target.value)}
+                onChange={(e) => {
+                  setWebAppUrl(e.target.value);
+                  setIsUrlTouched(true);
+                }}
                 placeholder="https://script.google.com/macros/s/.../exec"
                 className={`w-full px-3 py-2 bg-white dark:bg-[#252a30] border rounded-lg text-xs font-mono text-slate-900 dark:text-white focus:outline-emerald-500 ${
                   urlValidation.error 
@@ -923,6 +1030,69 @@ export const GoogleSheetsSyncCard: React.FC<GoogleSheetsSyncCardProps> = ({ full
               >
                 Selesai & Tutup
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Multi-Device QR Code Modal */}
+      {showQrModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-blue-50/50 dark:bg-blue-950/30">
+              <div className="flex items-center gap-2">
+                <QrCode className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Hubungkan Smartphone / Perangkat Lain
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowQrModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 flex flex-col items-center text-center space-y-4">
+              <div className="p-4 bg-white rounded-2xl shadow-inner border border-slate-200">
+                <QRCodeCanvas
+                  value={generateDevicePairingUrl(webAppUrl, sheetDocUrl)}
+                  size={210}
+                  level="M"
+                  includeMargin={true}
+                />
+              </div>
+
+              <div className="text-xs text-slate-600 dark:text-slate-300 space-y-2 max-w-sm">
+                <div className="font-semibold text-slate-800 dark:text-white text-sm">
+                  Cara Membuka di Smartphone:
+                </div>
+                <ol className="text-left text-xs list-decimal pl-5 space-y-1.5 text-slate-600 dark:text-slate-400">
+                  <li>Buka aplikasi <strong>Kamera</strong> di HP Android atau iPhone Anda.</li>
+                  <li>Arahkan kamera ke <strong>QR Code</strong> di atas.</li>
+                  <li>Ketuk tautan yang muncul untuk membuka aplikasi.</li>
+                  <li>Aplikasi di HP Anda akan <strong>langsung terhubung & memuat data terbaru</strong> dari Google Spreadsheet secara otomatis!</li>
+                </ol>
+              </div>
+
+              <div className="w-full pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyPairingUrl}
+                  className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-colors"
+                >
+                  {copiedPairingUrl ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+                  <span>{copiedPairingUrl ? "Tautan Berhasil Disalin!" : "Salin Tautan Sambung Otomatis (Untuk Kirim ke WA)"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowQrModal(false)}
+                  className="w-full py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-xs font-medium cursor-pointer"
+                >
+                  Tutup
+                </button>
+              </div>
             </div>
           </div>
         </div>
