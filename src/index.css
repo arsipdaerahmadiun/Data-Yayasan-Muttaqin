@@ -89,19 +89,46 @@
   border-color: #2b3036 !important;
 }
 
-/* Text Colors - make sure ALL text inside dark mode goes white/gray */
+/* --- TEMA BIRU GLOBAL UNTUK MODE TERANG --- */
+body, main {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+}
+
+/* Emerald -> Blue */
+.bg-emerald-50, .bg-emerald-100, .bg-emerald-500, .bg-emerald-600 { background-color: #2563eb !important; color: white !important; }
+.text-emerald-900, .text-emerald-800, .text-emerald-700, .text-emerald-600 { color: #1e40af !important; }
+
+/* Rose/Red -> Blue */
+.bg-red-50, .bg-red-100, .bg-rose-50, .bg-rose-600 { background-color: #2563eb !important; color: white !important; }
+.text-red-900, .text-red-800, .text-red-700, .text-red-600, .text-rose-600 { color: #1e40af !important; }
+
+/* Amber/Yellow -> Blue */
+.bg-amber-50, .bg-amber-100, .bg-yellow-50, .bg-amber-500 { background-color: #2563eb !important; color: white !important; }
+.text-amber-900, .text-amber-800, .text-amber-700, .text-amber-600 { color: #1e40af !important; }
+
+/* Indigo/Purple -> Blue */
+.bg-purple-50, .bg-indigo-50, .bg-purple-100, .bg-indigo-100, .bg-purple-600, .bg-indigo-600, .bg-purple-700 { background-color: #2563eb !important; color: white !important; }
+.text-purple-900, .text-purple-800, .text-purple-700, .text-indigo-900, .text-indigo-700 { color: #1e40af !important; }
+
+/* Text Colors - make sure ALL text inside dark mode is clearly visible */
 .dark, .dark * {
-  /* color: inherit;  <- removed this, might be too aggressive */
+  /* Ensure readability in dark mode */
 }
 
 .dark .text-slate-900, .dark .text-slate-800, .dark .text-slate-950 {
-  color: #fafafa !important;
+  color: #FFFFFF !important;
 }
 .dark .text-slate-700, .dark .text-slate-600 {
-  color: #a3a3a3 !important;
+  color: #FFFFFF !important;
 }
 .dark .text-slate-500, .dark .text-slate-400 {
-  color: #737373 !important;
+  color: #E2E8F0 !important;
+}
+
+/* Tambahan untuk placeholder agar lebih kontras */
+.dark ::placeholder {
+  color: #CBD5E1 !important;
+  opacity: 1 !important;
 }
 
 /* Borders & Dividers */
@@ -188,3 +215,24 @@
   color: #a3a3a3 !important;
 }
 
+/* =========================================
+   CLEAN PRINT MEDIA STYLING FOR REPORTS
+   ========================================= */
+@media print {
+  body, .dark, .dark body, .dark main {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  .print-section {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+}

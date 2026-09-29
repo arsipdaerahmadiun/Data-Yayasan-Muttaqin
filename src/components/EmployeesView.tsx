@@ -104,17 +104,18 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
   const currentUnitFilter = activeSubMenu !== "ALL" ? activeSubMenu : unitFilter;
 
   const filteredEmployees = employees.filter((emp) => {
-    const matchesSearch =
-      (emp.name || "").toLowerCase().includes((search || "").toLowerCase()) ||
-      (emp.nip || "").toLowerCase().includes((search || "").toLowerCase()) ||
-      (emp.positionTitle || "").toLowerCase().includes((search || "").toLowerCase()) ||
-      (emp.email || "").toLowerCase().includes((search || "").toLowerCase());
+    const q = (search || "").toLowerCase().trim();
+    if (!q) return true;
 
-    const matchesUnit = currentUnitFilter === "ALL" || emp.unit === currentUnitFilter;
-    const matchesRole = roleFilter === "ALL" || emp.role === roleFilter;
-    const matchesStatus = statusFilter === "ALL" || emp.employmentStatus === statusFilter;
-
-    return matchesSearch && matchesUnit && matchesRole && matchesStatus;
+    return (
+      (emp.name || "").toLowerCase().includes(q) ||
+      (emp.nip || "").toLowerCase().includes(q) ||
+      (emp.positionTitle || "").toLowerCase().includes(q) ||
+      (emp.role || "").toLowerCase().includes(q) ||
+      (emp.unit || "").toLowerCase().includes(q) ||
+      (emp.email || "").toLowerCase().includes(q) ||
+      (emp.phone || "").toLowerCase().includes(q)
+    );
   });
 
   const handleOpenAdd = () => {
@@ -180,125 +181,91 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
   };
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-600" />
-            Manajemen Data Pegawai, Guru & SDM Yayasan
-          </h2>
-          <p className="text-xs text-slate-500">
-            Database profil tenaga pendidik, staf kantor, pengurus yayasan, kualifikasi pendidikan, dan unit kerja.
-          </p>
-        </div>
+    <div className="space-y-6 max-w-7xl mx-auto pb-12 p-8 rounded-3xl bg-gradient-to-br from-blue-700 to-blue-600 text-white">
+      {/* Unified Top Header Card */}
+      <div className="bg-white/10 border border-white/20 rounded-2xl p-5 md:p-6 backdrop-blur-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-white/20 text-white flex items-center justify-center shrink-0 border border-white/30 shadow-lg">
+              <Users className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-white tracking-tight">
+                  Manajemen Data Pegawai, Guru & SDM Yayasan
+                </h1>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white border border-white/20">
+                  {employees.length} Pegawai Terdaftar
+                </span>
+              </div>
+              <p className="text-xs text-blue-100 mt-1 max-w-3xl">
+                Database profil tenaga pendidik, staf kantor, pengurus yayasan, kualifikasi pendidikan, dan unit kerja.
+              </p>
+            </div>
+          </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={handleExportCSV}
-            className="px-3 py-2 rounded-lg bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] border border-slate-300 hover:bg-slate-50 dark:bg-[#121417] text-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600" />
-            Ekspor CSV
-          </button>
-          <button
-            onClick={handleOpenAdd}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Tambah Pegawai Baru
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={handleExportCSV}
+              className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer border border-white/20 backdrop-blur-sm"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-white" />
+              <span>Ekspor CSV</span>
+            </button>
+            <button
+              onClick={handleOpenAdd}
+              className="px-4 py-2 rounded-xl bg-white text-blue-700 text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer shadow-lg hover:bg-blue-50"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tambah Pegawai Baru</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-xl p-4 border border-slate-200 shadow-2xs flex flex-col md:flex-row gap-3 items-center justify-between">
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+      {/* Search Bar */}
+      <div className="bg-white/10 rounded-2xl p-4 border border-white/20 flex flex-col md:flex-row gap-3 items-center justify-between backdrop-blur-sm">
+        <div className="relative flex-1 w-full">
+          <Search className="w-4 h-4 text-white/70 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
-            placeholder="Cari NIP, nama pegawai, jabatan..."
+            placeholder="Cari NIP, nama pegawai, jabatan, unit kerja, nomor kontak..."
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-[#121417] rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+            className="w-full pl-10 pr-9 py-2.5 text-xs md:text-sm bg-white/10 rounded-xl border border-white/20 text-white placeholder:text-white/60 focus:ring-2 focus:ring-white/30 outline-none transition-all"
           />
+          {localSearch && (
+            <button
+              onClick={() => setLocalSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
-            <span>Unit:</span>
-            <select
-              value={currentUnitFilter}
-              onChange={(e) => {
-                const val = e.target.value as EmployeeSubMenu;
-                setUnitFilter(val);
-                if (onSelectSubMenu) {
-                  onSelectSubMenu(val);
-                }
-              }}
-              className="text-xs py-1 px-2 bg-slate-50 dark:bg-[#121417] border border-slate-200 rounded-lg outline-none focus:border-blue-500"
-            >
-              <option value="ALL">Semua Unit ({employees.length})</option>
-              {UNITS.map(u => (
-                <option key={u} value={u}>{u}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <span>Peran:</span>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="text-xs py-1 px-2 bg-slate-50 dark:bg-[#121417] border border-slate-200 rounded-lg outline-none focus:border-blue-500"
-            >
-              <option value="ALL">Semua Peran</option>
-              {ROLES.map(r => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <span>Status:</span>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs py-1 px-2 bg-slate-50 dark:bg-[#121417] border border-slate-200 rounded-lg outline-none focus:border-blue-500"
-            >
-              <option value="ALL">Semua Status</option>
-              {STATUSES.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* View Toggle */}
-          <div className="flex items-center bg-slate-100 dark:bg-[#1a1d21] p-1 rounded-lg border border-slate-200 shrink-0">
+        {/* View Toggle */}
+        <div className="flex items-center p-1 rounded-xl bg-white/10 border border-white/20 shrink-0">
             <button
               onClick={() => setViewMode("table")}
-              className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                viewMode === "table" ? "bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] text-blue-800 shadow-2xs font-bold" : "text-slate-600 hover:text-slate-900"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === "table" ? "bg-white text-blue-700 shadow-lg" : "text-white/70 hover:text-white"
               }`}
-              title="Tampilan Tabel Rinci"
             >
               <List className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Tabel</span>
             </button>
             <button
               onClick={() => setViewMode("cards")}
-              className={`p-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                viewMode === "cards" ? "bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] text-blue-800 shadow-2xs font-bold" : "text-slate-600 hover:text-slate-900"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === "cards" ? "bg-white text-blue-700 shadow-lg" : "text-white/70 hover:text-white"
               }`}
-              title="Tampilan Kartu Ringkas (Nyaman di HP)"
             >
               <Grid className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Kartu</span>
             </button>
           </div>
         </div>
-      </div>
 
       {/* View Switch: Cards vs Table */}
       {viewMode === "cards" ? (

@@ -115,11 +115,10 @@ export const ClassPrintModal: React.FC<ClassPrintModalProps> = ({
               <thead>
                 <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-300 print:bg-slate-100">
                   <th className="py-2 px-2.5 text-center border-r border-slate-300 w-8">No</th>
-                  <th className="py-2 px-3 border-r border-slate-300">NISN / NIS</th>
-                  <th className="py-2 px-3 border-r border-slate-300">Nama Lengkap Siswa</th>
-                  <th className="py-2 px-2 text-center border-r border-slate-300 w-10">L/P</th>
-                  <th className="py-2 px-2.5 border-r border-slate-300">Kategori</th>
-                  <th className="py-2 px-2.5 border-r border-slate-300">SPP</th>
+                  <th className="py-2 px-3 border-r border-slate-300">Nama Siswa</th>
+                  <th className="py-2 px-2.5 border-r border-slate-300 text-center">Kelas</th>
+                  <th className="py-2 px-2 text-center border-r border-slate-300 w-12">L/P</th>
+                  <th className="py-2 px-3 border-r border-slate-300">Nama Orang Tua</th>
                   {/* Attendance or Grade Check Columns */}
                   <th className="py-2 px-1 text-center border-r border-slate-300 w-6">1</th>
                   <th className="py-2 px-1 text-center border-r border-slate-300 w-6">2</th>
@@ -135,7 +134,7 @@ export const ClassPrintModal: React.FC<ClassPrintModalProps> = ({
               <tbody className="divide-y divide-slate-200">
                 {students.length === 0 ? (
                   <tr>
-                    <td colSpan={15} className="py-6 text-center text-slate-400">
+                    <td colSpan={14} className="py-6 text-center text-slate-400">
                       Belum ada siswa yang terdaftar pada rombel ini.
                     </td>
                   </tr>
@@ -145,20 +144,17 @@ export const ClassPrintModal: React.FC<ClassPrintModalProps> = ({
                       <td className="py-2 px-2 text-center font-medium text-slate-500 border-r border-slate-200">
                         {idx + 1}
                       </td>
-                      <td className="py-2 px-3 font-mono text-[10px] text-slate-700 border-r border-slate-200">
-                        {s.nisn}
-                      </td>
                       <td className="py-2 px-3 font-semibold text-slate-900 border-r border-slate-200">
                         {s.name}
                       </td>
-                      <td className="py-2 px-2 text-center font-bold text-slate-600 border-r border-slate-200">
-                        {s.gender}
+                      <td className="py-2 px-2.5 text-center font-medium text-slate-700 border-r border-slate-200">
+                        {s.classGrade}
                       </td>
-                      <td className="py-2 px-2.5 text-[10px] text-slate-600 border-r border-slate-200 truncate max-w-[100px]">
-                        {s.category.replace("Beasiswa ", "Beas. ")}
+                      <td className="py-2 px-2 text-center font-bold text-slate-700 border-r border-slate-200">
+                        {s.gender === "P" ? "P" : "L"}
                       </td>
-                      <td className="py-2 px-2.5 text-[10px] font-semibold text-slate-700 border-r border-slate-200">
-                        {s.tuitionStatus}
+                      <td className="py-2 px-3 text-slate-800 border-r border-slate-200">
+                        {s.parentName || "-"}
                       </td>
                       {/* Check columns */}
                       <td className="py-2 border-r border-slate-200 text-center"></td>

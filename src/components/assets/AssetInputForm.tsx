@@ -360,14 +360,14 @@ export const AssetInputForm: React.FC<AssetInputFormProps> = ({ onAddAsset, onSu
       )}
 
       {/* Main Form Card */}
-      <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-5 sm:p-6">
+      <div className="glass-card p-5 sm:p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* ======================= TAB 1: TANAH ======================= */}
           {activeTab === "tanah" && (
             <div className="space-y-4">
               {/* Jenis Sertifikat */}
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-white/90 mb-1">
                   Jenis Sertifikat <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
@@ -503,10 +503,17 @@ export const AssetInputForm: React.FC<AssetInputFormProps> = ({ onAddAsset, onSu
                   <input
                     type="file"
                     accept=".pdf"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        setTanahState({ ...tanahState, pdfCertificateScan: file.name });
+                        try {
+                          // TODO: Implement actual Drive upload using authenticated GAPI/GIS client
+                          console.log("Uploading to Drive:", file.name);
+                          setTanahState({ ...tanahState, pdfCertificateScan: file.name });
+                        } catch (error) {
+                          console.error("Upload failed:", error);
+                          alert("Gagal mengunggah ke Google Drive. Pastikan akun sudah terhubung.");
+                        }
                       }
                     }}
                     className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-200 rounded-lg bg-white"
@@ -714,10 +721,17 @@ export const AssetInputForm: React.FC<AssetInputFormProps> = ({ onAddAsset, onSu
                   <input
                     type="file"
                     accept=".pdf,image/*"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        setKendaraanState({ ...kendaraanState, bpkbScan: file.name });
+                        try {
+                          // TODO: Implement actual Drive upload
+                          console.log("Uploading to Drive:", file.name);
+                          setKendaraanState({ ...kendaraanState, bpkbScan: file.name });
+                        } catch (error) {
+                          console.error("Upload failed:", error);
+                          alert("Gagal mengunggah ke Google Drive.");
+                        }
                       }
                     }}
                     className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-200 rounded-lg bg-white"

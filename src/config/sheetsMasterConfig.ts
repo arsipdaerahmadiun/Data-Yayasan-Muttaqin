@@ -11,7 +11,7 @@
 
 export const MASTER_SHEETS_CONFIG = {
   // Masukkan Web App URL yang berakhiran /exec di sini
-  webAppUrl: "https://script.google.com/macros/s/AKfycbzPeClSNHrpNqp67hHrnEWIxdmJLG9ON8LRo02kQyzzZC3eyXkhZJpHHNjvU7GQCTM/exec",
+  webAppUrl: "https://script.google.com/macros/s/AKfycbywM0hIuYlQbTCGKOFlTIcDOBLkFpA8-5VYlnkcmE5Iv-GiJs6lBJp2wrDYRebZbhNH/exec",
 
   // Tautan File Google Spreadsheet Yayasan ("ASET YAYASAN")
   sheetDocUrl: "https://docs.google.com/spreadsheets/d/1hPpJ7h30ffh8yL_E7E3_WNXp4gj-HGgTDAZ5DLmYP8A/edit",

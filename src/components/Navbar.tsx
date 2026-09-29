@@ -1,21 +1,15 @@
 import React from "react";
 import { 
-  Building2, 
-  RefreshCw, 
-  Printer, 
-  Sparkles, 
   Search, 
-  LogOut,
-  CheckCircle2,
-  ShieldCheck,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Bell,
-  Sun,
-  Moon
+  PanelLeftClose, 
+  PanelLeftOpen, 
+  Bell, 
+  Sun, 
+  Moon 
 } from "lucide-react";
 import { FoundationProfile, DatabaseStore, ActiveTab } from "../types";
 import { isSheetsConfigured } from "../lib/sheets";
+import PondokLogo from "./PondokLogo";
 
 interface NavbarProps {
   profile: FoundationProfile;
@@ -26,7 +20,7 @@ interface NavbarProps {
   pendingCount: number;
   onForceSync: () => void;
   onOpenReportModal: () => void;
-  onOpenAiAssistant: () => void;
+  onOpenAiAssistant?: () => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
   onLogout?: () => void;
@@ -162,10 +156,10 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Right: Search bar "Cari", Notification bell, User avatar FS */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {/* Search input with responsive width */}
-          <div className="relative w-32 xs:w-44 sm:w-60 md:w-72">
-            <Search className="w-4 h-4 text-slate-400 absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <div className="relative w-24 xs:w-36 sm:w-60 md:w-72">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="Cari..."
@@ -173,7 +167,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onChange={(e) => onSearchChange(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
               onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-              className="w-full h-8.5 sm:h-9 pl-8 sm:pl-9 pr-3 text-xs bg-slate-50 hover:bg-slate-100 focus:bg-white rounded-xl border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 outline-none transition-all placeholder:text-slate-400 text-slate-800"
+              className="w-full h-8 pl-7 sm:pl-9 pr-2 text-[10px] sm:text-xs bg-slate-50 hover:bg-slate-100 focus:bg-white rounded-xl border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 outline-none transition-all placeholder:text-slate-400 text-slate-800"
             />
             {searchTerm && (
               <button
@@ -220,21 +214,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Dark Mode Toggle */}
           <button
             onClick={onToggleDarkMode}
-            className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition-colors cursor-pointer"
+            className="p-1.5 sm:p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition-colors cursor-pointer"
             title={isDarkMode ? "Mode Terang" : "Mode Gelap"}
           >
-            {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
           </button>
 
           {/* Notification bell */}
           <div className="relative">
             <button
               onClick={() => setShowNotificationPopup((prev) => !prev)}
-              className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition-colors cursor-pointer relative"
+              className="p-1.5 sm:p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition-colors cursor-pointer relative"
               title="Pemberitahuan"
             >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-600"></span>
+              <Bell className="w-3.5 h-3.5" />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-blue-600"></span>
             </button>
 
             {showNotificationPopup && (
@@ -260,8 +254,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* User Avatar Circle */}
           <div className="flex items-center gap-2 pl-1">
-            <div className="w-9 h-9 rounded-full bg-slate-900 text-white font-bold text-xs flex items-start justify-center shadow-xs">
-              {initials}
+            <div className="w-9 h-9 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center shadow-xs overflow-hidden">
+              <PondokLogo className="w-full h-full object-cover" />
             </div>
           </div>
         </div>

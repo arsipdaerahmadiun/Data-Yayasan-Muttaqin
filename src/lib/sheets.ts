@@ -509,7 +509,8 @@ export async function pushAllDataToSheets(
         donations: data.donations || [],
         assetTransfers: data.assetTransfers || [],
         borrowedDocs: data.borrowedDocs || [],
-        meetings: data.meetings || []
+        meetings: data.meetings || [],
+        aidReports: data.aidReports || []
       }
     };
 
@@ -523,7 +524,8 @@ export async function pushAllDataToSheets(
         donations: data.donations?.length || 0,
         transfers: data.assetTransfers?.length || 0,
         borrowedDocs: data.borrowedDocs?.length || 0,
-        meetings: data.meetings?.length || 0
+        meetings: data.meetings?.length || 0,
+        aidReports: data.aidReports?.length || 0
       };
 
       return {
@@ -566,6 +568,7 @@ export async function pullAllDataFromSheets(
         employees: Array.isArray(incoming.employees) ? incoming.employees : undefined,
         students: Array.isArray(incoming.students) ? incoming.students : undefined,
         donations: Array.isArray(incoming.donations) ? incoming.donations : undefined,
+        aidReports: Array.isArray(incoming.aidReports) ? incoming.aidReports : undefined,
         assetTransfers: Array.isArray(incoming.assetTransfers) ? sanitizeTransfers(incoming.assetTransfers) : undefined,
         borrowedDocs: Array.isArray(incoming.borrowedDocs) ? sanitizeBorrowedDocs(incoming.borrowedDocs) : undefined,
         meetings: Array.isArray(incoming.meetings) ? incoming.meetings : undefined
@@ -594,7 +597,7 @@ export async function pullAllDataFromSheets(
  * Upsert satu item langsung ke Google Spreadsheet (Realtime sync)
  */
 export async function upsertItemToSheets(
-  sheetType: "assets" | "employees" | "students" | "donations" | "profile" | "assetTransfers" | "borrowedDocs" | "meetings",
+  sheetType: "assets" | "employees" | "students" | "donations" | "profile" | "assetTransfers" | "borrowedDocs" | "meetings" | "aidReports",
   item: any
 ): Promise<boolean> {
   if (!isSheetsConfigured() || !isSheetsAutoSyncEnabled()) return false;
@@ -615,7 +618,7 @@ export async function upsertItemToSheets(
  * Hapus satu item dari Google Spreadsheet berdasarkan ID
  */
 export async function deleteItemFromSheets(
-  sheetType: "assets" | "employees" | "students" | "donations" | "assetTransfers" | "borrowedDocs" | "meetings",
+  sheetType: "assets" | "employees" | "students" | "donations" | "assetTransfers" | "borrowedDocs" | "meetings" | "aidReports",
   id: string
 ): Promise<boolean> {
   if (!isSheetsConfigured()) return false;
@@ -806,6 +809,7 @@ function doPost(e) {
       if (d.assetTransfers) saveTransfersSheet(ss, d.assetTransfers);
       if (d.borrowedDocs) saveBorrowedDocsSheet(ss, d.borrowedDocs);
       if (d.meetings) saveMeetingsSheet(ss, d.meetings);
+      if (d.aidReports) saveAidReportsSheet(ss, d.aidReports);
       
       return jsonResponse({
         success: true,
@@ -1047,11 +1051,7 @@ function saveEmployeesSheet(ss, employees) {
 
 function saveStudentsSheet(ss, students) {
   var headers = [
-    "ID", "NISN", "NIS", "Nama Santri / Siswa", "Jenis Kelamin (L/P)", "Jenjang Pendidikan", 
-    "Tingkat / Kelas", "Tahun Ajaran", "Status", "Kategori Peserta Didik", 
-    "Nama Orang Tua / Wali", "No HP Wali / Ortu", "Alamat / Asrama", 
-    "Status SPP", "Nilai Rata-rata", "Jumlah Prestasi", 
-    "Tahun Kelulusan", "Studi Lanjut / Aktivitas Alumni", "No HP Alumni", "Email Alumni", "Catatan Tambahan"
+    "ID", "Nama Siswa", "Kelas", "Jenis Kelamin", "Nama Orang Tua"
   ];
   var sheet = getOrCreateSheet(ss, "Siswa", headers);
   safeClearData(sheet, 2);
@@ -1061,26 +1061,10 @@ function saveStudentsSheet(ss, students) {
   var rows = students.map(function(s) {
     return [
       s.id,
-      s.nisn || "",
-      s.nis || "",
       s.name || "",
-      s.gender || "L",
-      s.educationLevel || "SMA",
-      s.classGrade || "KELAS 10",
-      s.academicYear || "2025/2026",
-      s.status || "Aktif",
-      s.category || "Reguler",
-      s.parentName || "",
-      s.parentPhone || "",
-      s.address || "",
-      s.tuitionStatus || "Lunas",
-      Number(s.averageGrade) || 85,
-      Number(s.achievementsCount) || 0,
-      s.graduationYear || "",
-      s.currentActivity || "",
-      s.alumniPhone || "",
-      s.alumniEmail || "",
-      s.notes || ""
+      s.classGrade || "",
+      s.gender === "P" ? "Perempuan" : "Laki-laki",
+      s.parentName || ""
     ];
   });
   
@@ -1224,6 +1208,37 @@ function saveMeetingsSheet(ss, meetings) {
   safeSetValues(sheet, 2, 1, rows);
 }
 
+function saveAidReportsSheet(ss, reports) {
+  var headers = [
+    "ID", "Tipe", "Nama Target (Desa/Kelompok)", "Bulan", "Tahun", "Nama Bantuan", 
+    "Bantuan Pusat (Rp)", "Realisasi Kegunaan", "RAB (Rp)", "Shodaqoh Jamaah (Rp)", 
+    "Catatan", "Tgl Dibuat"
+  ];
+  var sheet = getOrCreateSheet(ss, "LaporanBantuan", headers);
+  safeClearData(sheet, 2);
+  
+  if (!reports || reports.length === 0) return;
+  
+  var rows = reports.map(function(r) {
+    return [
+      r.id,
+      r.aidType || "",
+      r.targetName || "",
+      r.receivedMonth || "",
+      r.receivedYear || "",
+      r.aidName || "",
+      Number(r.centralAidAmount) || 0,
+      r.realizationUsage || "",
+      Number(r.budgetPlanAmount) || 0,
+      Number(r.congregationCharityAmount) || 0,
+      r.notes || "",
+      r.createdAt || ""
+    ];
+  });
+  
+  safeSetValues(sheet, 2, 1, rows);
+}
+
 // ----------------------------------------------------------------------------
 // 6. HANDLER MEMBACA SEMUA DATA SPREADSHEET (Action: pull)
 // ----------------------------------------------------------------------------
@@ -1338,6 +1353,28 @@ function readAllDatabaseData(ss) {
   if (sSheet && sSheet.getLastRow() >= 2 && sSheet.getLastColumn() >= 1) {
     var sRows = sSheet.getRange(2, 1, sSheet.getLastRow() - 1, sSheet.getLastColumn()).getValues();
     res.students = sRows.map(function(r) {
+      // Format ringkas baru (ID, Nama, Kelas, Jenis Kelamin, Nama Orang Tua)
+      if (r.length <= 8) {
+        var gRaw = String(r[3] || "L").trim().toUpperCase();
+        var gVal = (gRaw.startsWith("P") || gRaw === "PEREMPUAN") ? "P" : "L";
+        return {
+          id: String(r[0]),
+          name: String(r[1] || ""),
+          classGrade: String(r[2] || "KELAS 1"),
+          gender: gVal,
+          parentName: String(r[4] || ""),
+          nisn: "",
+          nis: "",
+          educationLevel: "SMA",
+          academicYear: "2025/2026",
+          status: "Aktif",
+          category: "Reguler",
+          parentPhone: "-",
+          tuitionStatus: "Lunas",
+          averageGrade: 85,
+          achievementsCount: 0
+        };
+      }
       return {
         id: String(r[0]),
         nisn: r[1] || "",
@@ -1486,6 +1523,7 @@ function getSheetNameByType(type) {
     case "assetTransfers": return "BalikNama";
     case "borrowedDocs": return "PinjamBerkas";
     case "meetings": return "Musyawarah";
+    case "aidReports": return "LaporanBantuan";
     default: return type;
   }
 }
@@ -1584,26 +1622,10 @@ function upsertSingleRecord(ss, sheetType, item) {
   } else if (sheetType === "students") {
     rowData = [
       item.id,
-      item.nisn || "",
-      item.nis || "",
       item.name || "",
-      item.gender || "L",
-      item.educationLevel || "SMA",
-      item.classGrade || "KELAS 10",
-      item.academicYear || "2025/2026",
-      item.status || "Aktif",
-      item.category || "Reguler",
-      item.parentName || "",
-      item.parentPhone || "",
-      item.address || "",
-      item.tuitionStatus || "Lunas",
-      Number(item.averageGrade) || 85,
-      Number(item.achievementsCount) || 0,
-      item.graduationYear || "",
-      item.currentActivity || "",
-      item.alumniPhone || "",
-      item.alumniEmail || "",
-      item.notes || ""
+      item.classGrade || "",
+      item.gender === "P" ? "Perempuan" : "Laki-laki",
+      item.parentName || ""
     ];
   } else if (sheetType === "donations") {
     rowData = [

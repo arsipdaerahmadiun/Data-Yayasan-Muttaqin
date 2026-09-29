@@ -27,6 +27,7 @@ import { EmployeesView } from "./components/EmployeesView";
 import { StudentsView } from "./components/StudentsView";
 import { AlumniView } from "./components/AlumniView";
 import { DonationsView } from "./components/DonationsView";
+import { AidReportsView } from "./components/AidReportsView";
 import { MeetingsView } from "./components/MeetingsView";
 import { AdminPerformanceView } from "./components/AdminPerformanceView";
 import { AiAssistantView } from "./components/AiAssistantView";
@@ -49,6 +50,7 @@ import {
   AuditLogItem,
   SyncHistoryItem,
   DonationRecord,
+  AidReport,
   MeetingRecord
 } from "./types";
 import { 
@@ -1000,6 +1002,68 @@ export default function App() {
     deleteItemFromSheets("donations", id).catch((err) => console.warn("Sheets donation delete:", err));
   };
 
+  // --- Handlers for Laporan Bantuan (Daerah - Desa - Kelompok) ---
+  const handleAddAidReport = (newReport: Omit<AidReport, "id" | "createdAt">) => {
+    if (authRole === "visitor") return;
+    const item: AidReport = {
+      ...newReport,
+      id: "aid-" + Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      createdAt: new Date().toISOString(),
+      reporterName: authUsername
+    };
+
+    updateDataWithAudit(
+      (prev) => ({
+        ...prev,
+        aidReports: [item, ...(prev.aidReports || [])]
+      }),
+      {
+        action: "CREATE",
+        entityType: "Sistem",
+        details: `Menambahkan laporan bantuan: ${item.aidName} (${item.aidType} - ${item.targetName})`
+      }
+    );
+    showToast(`Laporan bantuan "${item.aidName}" berhasil ditambahkan & disinkronkan otomatis.`);
+    upsertItemToSheets("aidReports", item).catch((err) => console.warn("Sheets aid report upsert:", err));
+  };
+
+  const handleUpdateAidReport = (updatedReport: AidReport) => {
+    if (authRole === "visitor") return;
+    updateDataWithAudit(
+      (prev) => ({
+        ...prev,
+        aidReports: (prev.aidReports || []).map(r => r.id === updatedReport.id ? updatedReport : r)
+      }),
+      {
+        action: "UPDATE",
+        entityType: "Sistem",
+        details: `Memperbarui laporan bantuan: ${updatedReport.aidName} (${updatedReport.aidType})`
+      }
+    );
+    showToast(`Laporan bantuan "${updatedReport.aidName}" berhasil diperbarui & disinkronkan otomatis.`);
+    upsertItemToSheets("aidReports", updatedReport).catch((err) => console.warn("Sheets aid report update:", err));
+  };
+
+  const handleDeleteAidReport = (id: string) => {
+    if (authRole === "visitor") return;
+    const toDelete = (data.aidReports || []).find(r => r.id === id);
+    if (!toDelete) return;
+
+    updateDataWithAudit(
+      (prev) => ({
+        ...prev,
+        aidReports: (prev.aidReports || []).filter(r => r.id !== id)
+      }),
+      {
+        action: "DELETE",
+        entityType: "Sistem",
+        details: `Menghapus laporan bantuan: ${toDelete.aidName} (${toDelete.targetName})`
+      }
+    );
+    showToast("Laporan bantuan berhasil dihapus & disinkronkan otomatis.");
+    deleteItemFromSheets("aidReports", id).catch((err) => console.warn("Sheets aid report delete:", err));
+  };
+
   const handleUpdateAdminReport = (updatedReport: AdminPerformanceReport) => {
     updateDataWithAudit(
       (prev) => ({
@@ -1126,7 +1190,6 @@ export default function App() {
         pendingCount={pendingCount}
         onForceSync={triggerForceSync}
         onOpenReportModal={() => setIsReportModalOpen(true)}
-        onOpenAiAssistant={() => setActiveTab("ai-assistant")}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onLogout={() => setIsLogoutModalOpen(true)}
@@ -1196,7 +1259,6 @@ export default function App() {
               authUsername={authUsername}
               onNavigateTab={setActiveTab}
               onOpenReportModal={() => setIsReportModalOpen(true)}
-              onOpenAiAssistant={() => setActiveTab("ai-assistant")}
               onQuickAdd={handleQuickAdd}
               onForceSync={triggerForceSync}
               isSyncing={isSyncing}
@@ -1278,6 +1340,18 @@ export default function App() {
               readOnly={authRole === "visitor"}
             />
           )}
+
+          {activeTab === "aid-reports" && (
+            <AidReportsView
+              aidReports={data.aidReports || []}
+              onAddAidReport={handleAddAidReport}
+              onUpdateAidReport={handleUpdateAidReport}
+              onDeleteAidReport={handleDeleteAidReport}
+              searchTerm={searchTerm}
+              readOnly={authRole === "visitor"}
+              foundationProfile={data.profile}
+            />
+          )}
           
           {activeTab === "meetings" && (
             <MeetingsView
@@ -1295,15 +1369,7 @@ export default function App() {
               report={data.adminReport}
               onUpdateReport={handleUpdateAdminReport}
               onOpenReportModal={() => setIsReportModalOpen(true)}
-              onOpenAiAssistant={() => setActiveTab("ai-assistant")}
               readOnly={authRole === "visitor"}
-            />
-          )}
-
-          {activeTab === "ai-assistant" && (
-            <AiAssistantView
-              data={data}
-              onOpenReportModal={() => setIsReportModalOpen(true)}
             />
           )}
 

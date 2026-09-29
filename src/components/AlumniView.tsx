@@ -149,26 +149,22 @@ export const AlumniView: React.FC<AlumniViewProps> = ({
   // Filtered Alumni
   const filteredAlumni = useMemo(() => {
     return alumniList.filter(a => {
-      const lvl = normalizeLevel(a.educationLevel);
       const q = (search || "").toLowerCase().trim();
+      if (!q) return true;
 
-      const matchesSearch =
-        !q ||
+      const lvl = normalizeLevel(a.educationLevel);
+      return (
         (a.name || "").toLowerCase().includes(q) ||
         (a.nisn || "").toLowerCase().includes(q) ||
         (a.nis || "").toLowerCase().includes(q) ||
         (a.currentActivity && a.currentActivity.toLowerCase().includes(q)) ||
         (a.classGrade && (a.classGrade || "").toLowerCase().includes(q)) ||
-        (a.parentName && (a.parentName || "").toLowerCase().includes(q));
-
-      const matchesLevel = levelFilter === "ALL" || lvl === levelFilter;
-      const gradYear = a.graduationYear || a.academicYear;
-      const matchesYear = yearFilter === "ALL" || gradYear === yearFilter;
-      const matchesGender = genderFilter === "ALL" || a.gender === genderFilter;
-
-      return matchesSearch && matchesLevel && matchesYear && matchesGender;
+        (a.parentName && (a.parentName || "").toLowerCase().includes(q)) ||
+        (a.graduationYear && (a.graduationYear || "").toLowerCase().includes(q)) ||
+        lvl.toLowerCase().includes(q)
+      );
     });
-  }, [alumniList, search, levelFilter, yearFilter, genderFilter]);
+  }, [alumniList, search]);
 
   // Statistics
   const stats = useMemo(() => {
@@ -311,24 +307,24 @@ export const AlumniView: React.FC<AlumniViewProps> = ({
   };
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-300">
-      {/* Top Banner Header */}
-      <div className="bg-linear-to-r from-indigo-900 via-purple-900 to-slate-900 rounded-2xl p-5 sm:p-6 text-white shadow-md border border-indigo-800/40 relative overflow-hidden">
-        <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-        
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+    <div className="space-y-5">
+      {/* Unified Top Header Card */}
+      <div className="bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-2xl border border-slate-200 shadow-xs p-5 md:p-6 transition-all">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start sm:items-center gap-3.5">
-            <div className="p-3 bg-white dark:bg-[#1a1d21] dark:border-[#2b3036]/10 rounded-xl border border-white/20 text-indigo-300 shadow-inner">
-              <Award className="w-7 h-7" />
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0 shadow-2xs">
+              <Award className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Data Alumni Yayasan</h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-400/20 text-indigo-200 border border-indigo-300/30">
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  Data Alumni Yayasan
+                </h1>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
                   {stats.total} Lulusan Terdata
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-indigo-200/80 mt-1 max-w-2xl">
+              <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
                 Direktori terpadu lulusan seluruh jenjang (RA, SDIT, SMP, SMA). Siswa yang telah dinyatakan lulus otomatis masuk ke menu ini dengan riwayat studi lengkap.
               </p>
             </div>
@@ -338,22 +334,22 @@ export const AlumniView: React.FC<AlumniViewProps> = ({
             {onNavigateToStudents && (
               <button
                 onClick={onNavigateToStudents}
-                className="px-3.5 py-2 rounded-xl bg-white dark:bg-[#1a1d21] dark:border-[#2b3036]/10 hover:bg-white dark:bg-[#1a1d21] dark:border-[#2b3036]/20 text-white text-xs font-semibold border border-white/20 backdrop-blur-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-medium text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-[#22262b] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-2xs transition-all cursor-pointer"
               >
-                <Users className="w-4 h-4" />
-                <span>Data Siswa Aktif &rarr;</span>
+                <Users className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                <span>Data Siswa Aktif</span>
               </button>
             )}
             <button
               onClick={handleExportCSV}
-              className="px-3.5 py-2 rounded-xl bg-white dark:bg-[#1a1d21] dark:border-[#2b3036]/10 hover:bg-white dark:bg-[#1a1d21] dark:border-[#2b3036]/20 text-white text-xs font-semibold border border-white/20 backdrop-blur-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-medium text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-[#22262b] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-2xs transition-all cursor-pointer"
             >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-300" />
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>Ekspor CSV</span>
             </button>
             <button
               onClick={handleOpenAdd}
-              className="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-xs transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Tambah Alumni</span>
@@ -366,265 +362,176 @@ export const AlumniView: React.FC<AlumniViewProps> = ({
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
         <div 
           onClick={() => setLevelFilter("ALL")}
-          className={`bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-xl p-3.5 border transition-all cursor-pointer ${
-            levelFilter === "ALL" ? "border-indigo-600 ring-2 ring-indigo-500/20 bg-indigo-50/20" : "border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+          className={`rounded-xl p-4 border transition-all cursor-pointer ${
+            levelFilter === "ALL" 
+              ? "border-blue-600 ring-2 ring-blue-500/20 bg-blue-50/30 dark:bg-blue-900/20" 
+              : "bg-white dark:bg-[#1a1d21] border-slate-200 dark:border-[#2b3036] hover:border-slate-300 dark:hover:border-slate-700"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-700">Semua Lulusan</span>
-            <div className="p-1.5 bg-indigo-100 rounded-lg text-indigo-700">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Semua Lulusan</span>
+            <div className="p-1.5 bg-blue-100 dark:bg-blue-900/50 rounded-lg text-blue-700 dark:text-blue-300">
               <GraduationCap className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold font-mono text-slate-900">{stats.total}</span>
-            <span className="text-[11px] text-slate-500 font-medium">Alumni</span>
+            <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">{stats.total}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Alumni</span>
           </div>
-          <div className="mt-2 pt-2 border-t border-slate-100 text-[10px] text-slate-500">
-            Seluruh 4 Jenjang Pendidikan
+          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400">
+            Seluruh 4 Jenjang
           </div>
         </div>
 
         <div 
           onClick={() => setLevelFilter(levelFilter === "SMA" ? "ALL" : "SMA")}
-          className={`bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-xl p-3.5 border transition-all cursor-pointer ${
-            levelFilter === "SMA" ? "border-purple-600 ring-2 ring-purple-500/20 bg-purple-50/20" : "border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+          className={`rounded-xl p-4 border transition-all cursor-pointer ${
+            levelFilter === "SMA" 
+              ? "border-purple-600 ring-2 ring-purple-500/20 bg-purple-50/30 dark:bg-purple-900/20" 
+              : "bg-white dark:bg-[#1a1d21] border-slate-200 dark:border-[#2b3036] hover:border-slate-300 dark:hover:border-slate-700"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-purple-700">Alumni SMA</span>
-            <div className="p-1.5 bg-purple-100 rounded-lg text-purple-700">
+            <span className="text-xs font-bold text-purple-700 dark:text-purple-400">Alumni SMA</span>
+            <div className="p-1.5 bg-purple-100 dark:bg-purple-900/50 rounded-lg text-purple-700 dark:text-purple-300">
               <School className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold font-mono text-slate-900">{stats.sma}</span>
-            <span className="text-[11px] text-slate-500 font-medium">Lulusan</span>
+            <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">{stats.sma}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Lulusan</span>
           </div>
-          <div className="mt-2 pt-2 border-t border-slate-100 text-[10px] text-purple-700 font-medium">
+          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-purple-700 dark:text-purple-400 font-medium">
             PTN / PTS / Karier
           </div>
         </div>
 
         <div 
           onClick={() => setLevelFilter(levelFilter === "SMP" ? "ALL" : "SMP")}
-          className={`bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-xl p-3.5 border transition-all cursor-pointer ${
-            levelFilter === "SMP" ? "border-blue-600 ring-2 ring-blue-500/20 bg-blue-50/20" : "border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+          className={`rounded-xl p-4 border transition-all cursor-pointer ${
+            levelFilter === "SMP" 
+              ? "border-blue-600 ring-2 ring-blue-500/20 bg-blue-50/30 dark:bg-blue-900/20" 
+              : "bg-white dark:bg-[#1a1d21] border-slate-200 dark:border-[#2b3036] hover:border-slate-300 dark:hover:border-slate-700"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-blue-700">Alumni SMP</span>
-            <div className="p-1.5 bg-blue-100 rounded-lg text-blue-700">
+            <span className="text-xs font-bold text-blue-700 dark:text-blue-400">Alumni SMP</span>
+            <div className="p-1.5 bg-blue-100 dark:bg-blue-900/50 rounded-lg text-blue-700 dark:text-blue-300">
               <BookOpen className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold font-mono text-slate-900">{stats.smp}</span>
-            <span className="text-[11px] text-slate-500 font-medium">Lulusan</span>
+            <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">{stats.smp}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Lulusan</span>
           </div>
-          <div className="mt-2 pt-2 border-t border-slate-100 text-[10px] text-blue-700 font-medium">
+          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-blue-700 dark:text-blue-400 font-medium">
             Lanjut SMA / SMK / MA
           </div>
         </div>
 
         <div 
           onClick={() => setLevelFilter(levelFilter === "SDIT" ? "ALL" : "SDIT")}
-          className={`bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-xl p-3.5 border transition-all cursor-pointer ${
-            levelFilter === "SDIT" ? "border-emerald-600 ring-2 ring-emerald-500/20 bg-emerald-50/20" : "border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+          className={`rounded-xl p-4 border transition-all cursor-pointer ${
+            levelFilter === "SDIT" 
+              ? "border-emerald-600 ring-2 ring-emerald-500/20 bg-emerald-50/30 dark:bg-emerald-900/20" 
+              : "bg-white dark:bg-[#1a1d21] border-slate-200 dark:border-[#2b3036] hover:border-slate-300 dark:hover:border-slate-700"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-700">Alumni SDIT</span>
-            <div className="p-1.5 bg-emerald-100 rounded-lg text-emerald-700">
+            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">Alumni SDIT</span>
+            <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg text-emerald-700 dark:text-emerald-300">
               <BookOpen className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold font-mono text-slate-900">{stats.sdit}</span>
-            <span className="text-[11px] text-slate-500 font-medium">Lulusan</span>
+            <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">{stats.sdit}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Lulusan</span>
           </div>
-          <div className="mt-2 pt-2 border-t border-slate-100 text-[10px] text-emerald-700 font-medium">
+          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
             Lanjut SMP / MTs
           </div>
         </div>
 
         <div 
           onClick={() => setLevelFilter(levelFilter === "RA" ? "ALL" : "RA")}
-          className={`bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-xl p-3.5 border transition-all cursor-pointer ${
-            levelFilter === "RA" ? "border-amber-600 ring-2 ring-amber-500/20 bg-amber-50/20" : "border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+          className={`rounded-xl p-4 border transition-all cursor-pointer ${
+            levelFilter === "RA" 
+              ? "border-amber-600 ring-2 ring-amber-500/20 bg-amber-50/30 dark:bg-amber-900/20" 
+              : "bg-white dark:bg-[#1a1d21] border-slate-200 dark:border-[#2b3036] hover:border-slate-300 dark:hover:border-slate-700"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-700">Alumni RA</span>
-            <div className="p-1.5 bg-amber-100 rounded-lg text-amber-700">
+            <span className="text-xs font-bold text-amber-700 dark:text-amber-400">Alumni RA</span>
+            <div className="p-1.5 bg-amber-100 dark:bg-amber-900/50 rounded-lg text-amber-700 dark:text-amber-300">
               <Sparkles className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold font-mono text-slate-900">{stats.ra}</span>
-            <span className="text-[11px] text-slate-500 font-medium">Lulusan</span>
+            <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">{stats.ra}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Lulusan</span>
           </div>
-          <div className="mt-2 pt-2 border-t border-slate-100 text-[10px] text-amber-700 font-medium">
+          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-amber-700 dark:text-amber-400 font-medium">
             Lanjut SD / MI
           </div>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-xl p-4 border border-slate-200 shadow-2xs space-y-3">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Search box */}
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
-              placeholder="Cari berdasarkan nama alumni, NISN, kampus/sekolah lanjutan, atau wali..."
-              className="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-300 bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-            />
-            {localSearch && (
-              <button 
-                onClick={() => setLocalSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* Quick Level Filter Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-            <button
-              onClick={() => setLevelFilter("ALL")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors border ${
-                levelFilter === "ALL"
-                  ? "bg-indigo-900 text-white border-indigo-900 shadow-2xs"
-                  : "bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] text-slate-600 border-slate-200 hover:bg-slate-50"
-              }`}
+      {/* Search Bar - Hanya Menu Pencarian */}
+      <div className="bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-2xl p-4 border border-slate-200 shadow-xs">
+        <div className="relative w-full">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
+            placeholder="Cari berdasarkan nama alumni, NISN, jenjang, kampus/sekolah lanjutan, atau nama wali..."
+            className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#121417] text-xs md:text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          />
+          {localSearch && (
+            <button 
+              onClick={() => setLocalSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              title="Hapus pencarian"
             >
-              Semua ({stats.total})
-            </button>
-            <button
-              onClick={() => setLevelFilter("SMA")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors border ${
-                levelFilter === "SMA"
-                  ? "bg-purple-600 text-white border-purple-600 shadow-2xs"
-                  : "bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] text-slate-600 border-slate-200 hover:bg-slate-50"
-              }`}
-            >
-              SMA ({stats.sma})
-            </button>
-            <button
-              onClick={() => setLevelFilter("SMP")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors border ${
-                levelFilter === "SMP"
-                  ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
-                  : "bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] text-slate-600 border-slate-200 hover:bg-slate-50"
-              }`}
-            >
-              SMP ({stats.smp})
-            </button>
-            <button
-              onClick={() => setLevelFilter("SDIT")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors border ${
-                levelFilter === "SDIT"
-                  ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs"
-                  : "bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] text-slate-600 border-slate-200 hover:bg-slate-50"
-              }`}
-            >
-              SDIT ({stats.sdit})
-            </button>
-            <button
-              onClick={() => setLevelFilter("RA")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors border ${
-                levelFilter === "RA"
-                  ? "bg-amber-600 text-white border-amber-600 shadow-2xs"
-                  : "bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] text-slate-600 border-slate-200 hover:bg-slate-50"
-              }`}
-            >
-              RA ({stats.ra})
-            </button>
-          </div>
-        </div>
-
-        {/* Secondary filters: Graduation Year & Gender */}
-        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100 text-xs">
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-500 font-medium">Tahun Kelulusan:</span>
-            <select
-              value={yearFilter}
-              onChange={(e) => setYearFilter(e.target.value)}
-              className="px-2.5 py-1 rounded-md border border-slate-300 bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] text-slate-700 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="ALL">Semua Tahun Kelulusan</option>
-              {availableYears.map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-500 font-medium">Gender:</span>
-            <select
-              value={genderFilter}
-              onChange={(e) => setGenderFilter(e.target.value)}
-              className="px-2.5 py-1 rounded-md border border-slate-300 bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] text-slate-700 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="ALL">Semua</option>
-              <option value="L">Laki-laki</option>
-              <option value="P">Perempuan</option>
-            </select>
-          </div>
-
-          {(localSearch || levelFilter !== "ALL" || yearFilter !== "ALL" || genderFilter !== "ALL") && (
-            <button
-              onClick={() => {
-                setLocalSearch("");
-                setLevelFilter("ALL");
-                setYearFilter("ALL");
-                setGenderFilter("ALL");
-              }}
-              className="text-indigo-600 hover:text-indigo-800 font-semibold ml-auto"
-            >
-              Reset Filter
+              <X className="w-4 h-4" />
             </button>
           )}
         </div>
       </div>
 
       {/* Alumni Table */}
-      <div className="bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+      <div className="bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         {filteredAlumni.length === 0 ? (
           <div className="p-12 text-center text-slate-400 space-y-3">
-            <Award className="w-12 h-12 mx-auto text-slate-300" />
-            <h3 className="text-base font-bold text-slate-700">Belum Ada Data Alumni</h3>
-            <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Ketika siswa dinyatakan lulus pada fitur <strong className="font-semibold text-slate-700">Kenaikan Kelas</strong> atau statusnya diubah menjadi Lulus, mereka akan otomatis tercatat dan tersimpan di menu ini.
+            <Award className="w-12 h-12 mx-auto text-blue-500 opacity-30" />
+            <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">Belum Ada Data Alumni</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+              Ketika siswa dinyatakan lulus pada fitur <strong className="font-semibold text-slate-700 dark:text-slate-200">Kenaikan Kelas</strong> atau statusnya diubah menjadi Lulus, mereka akan otomatis tercatat dan tersimpan di menu ini.
             </p>
             <div className="flex items-start justify-center gap-2 pt-2">
               <button
                 onClick={handleOpenAdd}
-                className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors shadow-2xs"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-xs transition-all cursor-pointer"
               >
-                + Tambah Data Alumni
+                <Plus className="w-4 h-4" />
+                <span>Tambah Data Alumni</span>
               </button>
             </div>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-slate-100 dark:bg-[#1a1d21] text-slate-700 font-bold border-b border-slate-200 uppercase tracking-wider text-[10px]">
+              <thead className="bg-slate-50 dark:bg-[#121417] text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800 uppercase tracking-wider text-[11px]">
                 <tr>
-                  <th className="px-4 py-3">Nama Alumni & Identitas</th>
-                  <th className="px-4 py-3">Jenjang & Angkatan</th>
-                  <th className="px-4 py-3">Studi Lanjut / Aktivitas</th>
-                  <th className="px-4 py-3">Kontak</th>
-                  <th className="px-4 py-3">Prestasi & Nilai</th>
-                  <th className="px-4 py-3 text-right">Aksi</th>
+                  <th className="px-4 py-3.5">Nama Alumni & Identitas</th>
+                  <th className="px-4 py-3.5">Jenjang & Angkatan</th>
+                  <th className="px-4 py-3.5">Studi Lanjut / Aktivitas</th>
+                  <th className="px-4 py-3.5">Kontak</th>
+                  <th className="px-4 py-3.5">Prestasi & Nilai</th>
+                  <th className="px-4 py-3.5 text-right">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 bg-white dark:bg-[#1a1d21] dark:border-[#2b3036]">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 bg-white dark:bg-[#1a1d21]">
                 {filteredAlumni.map((alumni) => {
                   const lvl = normalizeLevel(alumni.educationLevel);
                   const lvlInfo = LEVEL_LABELS[lvl];

@@ -165,10 +165,9 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [localSearch, setLocalSearch] = useState("");
   const [levelFilter, setLevelFilter] = useState<string>(activeSubMenu || "ALL");
   const [classFilter, setClassFilter] = useState<string>("ALL");
+  const [genderFilter, setGenderFilter] = useState<string>("ALL");
   const [viewMode, setViewMode] = useState<"grouped" | "table">("grouped");
   const [collapsedClasses, setCollapsedClasses] = useState<Record<string, boolean>>({});
-  const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
-  const [tuitionFilter, setTuitionFilter] = useState<string>("ALL");
   const [includeGraduated, setIncludeGraduated] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentItem | null>(null);
@@ -212,24 +211,17 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     }
   };
 
-  // Form State
-  const [formData, setFormData] = useState<Omit<StudentItem, "id">>({
-    nisn: "",
-    nis: "",
+  // Form State: Fokus pada 4 kolom yang dibutuhkan (Nama, Kelas, Jenis Kelamin, Nama Orang Tua)
+  const [formData, setFormData] = useState<{
+    name: string;
+    classGrade: string;
+    gender: "L" | "P";
+    parentName: string;
+  }>({
     name: "",
+    classGrade: "KELAS 1",
     gender: "L",
-    educationLevel: "SMA",
-    classGrade: "KELAS 10",
-    academicYear: "2025/2026",
-    status: "Aktif",
-    category: "Reguler",
-    parentName: "",
-    parentPhone: "",
-    tuitionStatus: "Lunas",
-    averageGrade: 90,
-    achievementsCount: 0,
-    address: "",
-    notes: ""
+    parentName: ""
   });
 
   const search = globalSearch || localSearch;
@@ -243,7 +235,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     return normalizeLevel(s.educationLevel) === levelFilter;
   });
 
-  // HANYA kelas standar resmi yayasan yang diakomodir. Kelas selain itu dihilangkan.
+  // HANYA kelas standar resmi yayasan yang diakomodir.
   const availableClasses: string[] = levelFilter !== "ALL"
     ? (ALLOWED_CLASSES_BY_LEVEL[levelFilter as EducationLevel] || [])
     : STANDARD_CLASS_ORDER;
@@ -257,9 +249,9 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       total: inClass.length,
       boys: inClass.filter(s => s.gender === "L").length,
       girls: inClass.filter(s => s.gender === "P").length,
-      scholarships: inClass.filter(s => s.category.includes("Beasiswa")).length,
-      tuitionPaid: inClass.filter(s => s.tuitionStatus === "Lunas").length,
-      tuitionUnpaid: inClass.filter(s => s.tuitionStatus === "Menunggak").length
+      scholarships: 0,
+      tuitionPaid: inClass.length,
+      tuitionUnpaid: 0
     };
     return acc;
   }, {} as Record<string, { total: number; boys: number; girls: number; scholarships: number; tuitionPaid: number; tuitionUnpaid: number }>);
@@ -268,26 +260,18 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const activeRombelCount = availableClasses.filter(c => (classStatsMap[c]?.total || 0) > 0).length;
 
   const filteredStudents = students.filter((std) => {
-    // Siswa yang berstatus Lulus masuk ke Menu Alumni secara default
     if (!includeGraduated && std.status === "Lulus") return false;
 
     const stdLevel = normalizeLevel(std.educationLevel);
     const stdNormalizedClass = normalizeStandardClass(std.classGrade, stdLevel);
     const matchesSearch =
+      !search ||
       (std.name || "").toLowerCase().includes((search || "").toLowerCase()) ||
-      (std.nisn || "").toLowerCase().includes((search || "").toLowerCase()) ||
-      (std.nis || "").toLowerCase().includes((search || "").toLowerCase()) ||
       (std.parentName || "").toLowerCase().includes((search || "").toLowerCase()) ||
       (std.classGrade || "").toLowerCase().includes((search || "").toLowerCase()) ||
-      stdNormalizedClass.toLowerCase().includes((search || "").toLowerCase()) ||
-      LEVEL_DETAILS[stdLevel]?.label.toLowerCase().includes((search || "").toLowerCase());
+      stdNormalizedClass.toLowerCase().includes((search || "").toLowerCase());
 
-    const matchesLevel = levelFilter === "ALL" || stdLevel === levelFilter;
-    const matchesClass = classFilter === "ALL" || stdNormalizedClass.trim().toLowerCase() === classFilter.trim().toLowerCase();
-    const matchesCategory = categoryFilter === "ALL" || std.category === categoryFilter;
-    const matchesTuition = tuitionFilter === "ALL" || std.tuitionStatus === tuitionFilter;
-
-    return matchesSearch && matchesLevel && matchesClass && matchesCategory && matchesTuition;
+    return matchesSearch;
   });
 
   const totalCount = includeGraduated ? students.length : activeStudentsList.length;
@@ -299,36 +283,33 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       count: list.length,
       boys: list.filter(s => s.gender === "L").length,
       girls: list.filter(s => s.gender === "P").length,
-      scholarships: list.filter(s => s.category.includes("Beasiswa")).length,
-      active: list.filter(s => s.status === "Aktif").length
+      scholarships: 0,
+      active: list.length
     };
     return acc;
   }, {} as Record<EducationLevel, { count: number; boys: number; girls: number; scholarships: number; active: number }>);
 
   const handleOpenAdd = () => {
-    const nextNisn = `00${Math.floor(10000000 + Math.random() * 90000000)}`;
-    const nextNis = `2526${Math.floor(10000 + Math.random() * 90000)}`;
-    const selectedLevel: EducationLevel = (levelFilter !== "ALL" && (levelFilter === "RA" || levelFilter === "SDIT" || levelFilter === "SMP" || levelFilter === "SMA"))
-      ? levelFilter
-      : "SMA";
+    const defaultClass = levelFilter !== "ALL" && (ALLOWED_CLASSES_BY_LEVEL[levelFilter as EducationLevel]?.[0])
+      ? ALLOWED_CLASSES_BY_LEVEL[levelFilter as EducationLevel][0]
+      : "KELAS 1";
 
     setFormData({
-      nisn: nextNisn,
-      nis: nextNis,
       name: "",
+      classGrade: defaultClass,
       gender: "L",
-      educationLevel: selectedLevel,
-      classGrade: LEVEL_DETAILS[selectedLevel].classSuggestions[0] || "KELAS 10",
-      academicYear: "2025/2026",
-      status: "Aktif",
-      category: "Reguler",
-      parentName: "",
-      parentPhone: "08",
-      tuitionStatus: "Lunas",
-      averageGrade: 90,
-      achievementsCount: 0,
-      address: "",
-      notes: ""
+      parentName: ""
+    });
+    setEditingStudent(null);
+    setIsAddModalOpen(true);
+  };
+
+  const handleOpenAddForClass = (clsName: string, level: EducationLevel) => {
+    setFormData({
+      name: "",
+      classGrade: clsName,
+      gender: "L",
+      parentName: ""
     });
     setEditingStudent(null);
     setIsAddModalOpen(true);
@@ -339,85 +320,86 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     const validClass = normalizeStandardClass(std.classGrade, lvl);
     setEditingStudent(std);
     setFormData({
-      ...std,
-      educationLevel: lvl,
-      classGrade: validClass
+      name: std.name,
+      classGrade: validClass || std.classGrade,
+      gender: (std.gender === "P" ? "P" : "L"),
+      parentName: std.parentName || ""
     });
     setIsAddModalOpen(true);
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.nisn.trim()) {
-      alert("Mohon lengkapi NISN dan nama peserta didik!");
+    if (!formData.name.trim()) {
+      alert("Mohon masukkan nama peserta didik / siswa!");
+      return;
+    }
+    if (!formData.classGrade.trim()) {
+      alert("Mohon tentukan kelas peserta didik!");
       return;
     }
 
-    const lvl = normalizeLevel(formData.educationLevel);
-    const validClass = normalizeStandardClass(formData.classGrade, lvl);
-    const cleanStudentData = {
-      ...formData,
-      educationLevel: lvl,
-      classGrade: validClass
+    const normClass = formData.classGrade.trim();
+    let detectedLevel: EducationLevel = "SMA";
+    if (normClass.startsWith("RA") || /TK/i.test(normClass)) {
+      detectedLevel = "RA";
+    } else if (/KELAS\s*[1-6]\b/i.test(normClass)) {
+      detectedLevel = "SDIT";
+    } else if (/KELAS\s*[7-9]\b/i.test(normClass)) {
+      detectedLevel = "SMP";
+    }
+
+    const studentPayload: Omit<StudentItem, "id"> = {
+      name: formData.name.trim(),
+      classGrade: normClass,
+      gender: formData.gender,
+      parentName: formData.parentName.trim(),
+      // Nilai default untuk kompatibilitas data & ekspor
+      nisn: editingStudent?.nisn || `00${Math.floor(10000000 + Math.random() * 90000000)}`,
+      nis: editingStudent?.nis || `2526${Math.floor(10000 + Math.random() * 90000)}`,
+      educationLevel: detectedLevel,
+      academicYear: editingStudent?.academicYear || "2025/2026",
+      status: editingStudent?.status || "Aktif",
+      category: editingStudent?.category || "Reguler",
+      parentPhone: editingStudent?.parentPhone || "-",
+      tuitionStatus: editingStudent?.tuitionStatus || "Lunas",
+      averageGrade: editingStudent?.averageGrade || 85,
+      achievementsCount: editingStudent?.achievementsCount || 0,
+      address: editingStudent?.address || "",
+      notes: editingStudent?.notes || ""
     };
 
     if (editingStudent) {
       onUpdateStudent({
-        ...cleanStudentData,
+        ...studentPayload,
         id: editingStudent.id
       });
     } else {
-      onAddStudent(cleanStudentData);
+      onAddStudent(studentPayload);
     }
     setIsAddModalOpen(false);
     setEditingStudent(null);
   };
 
   const handleExportCSV = () => {
-    const exportRows = filteredStudents.map(s => {
-      const lvl = normalizeLevel(s.educationLevel);
-      return {
-        "NISN": s.nisn,
-        "NIS": s.nis,
-        "Nama Lengkap": s.name,
-        "Jenis Kelamin": s.gender === "L" ? "Laki-laki" : "Perempuan",
-        "Jenjang Pendidikan": LEVEL_DETAILS[lvl].label,
-        "Unit Sekolah": LEVEL_DETAILS[lvl].fullName,
-        "Kelas / Tingkat": s.classGrade,
-        "Tahun Ajaran": s.academicYear,
-        "Kategori Peserta Didik": s.category,
-        "Status": s.status,
-        "Nama Orang Tua / Wali": s.parentName,
-        "No. Kontak Wali": s.parentPhone,
-        "Status SPP": s.tuitionStatus,
-        "Alamat / Asrama": s.address || "-",
-        "Catatan": s.notes || "-"
-      };
-    });
-    exportToCSV(`Data_Peserta_Didik_Yayasan_${new Date().toISOString().split("T")[0]}.csv`, exportRows);
+    const exportRows = filteredStudents.map((s, idx) => ({
+      "No": idx + 1,
+      "Nama Siswa": s.name,
+      "Kelas": s.classGrade,
+      "Jenis Kelamin": s.gender === "P" ? "Perempuan" : "Laki-laki",
+      "Nama Orang Tua": s.parentName || "-"
+    }));
+    exportToCSV(`Data_Siswa_${new Date().toISOString().split("T")[0]}.csv`, exportRows);
   };
 
   const handleExportClassCSV = (targetClassName: string, classStudents: StudentItem[]) => {
-    const exportRows = classStudents.map((s, idx) => {
-      const lvl = normalizeLevel(s.educationLevel);
-      return {
-        "No": idx + 1,
-        "NISN": s.nisn,
-        "NIS": s.nis,
-        "Nama Lengkap": s.name,
-        "Jenis Kelamin": s.gender === "L" ? "Laki-laki" : "Perempuan",
-        "Jenjang": LEVEL_DETAILS[lvl].label,
-        "Kelas / Rombel": s.classGrade,
-        "Tahun Ajaran": s.academicYear,
-        "Kategori": s.category,
-        "Status Keaktifan": s.status,
-        "Nama Orang Tua": s.parentName,
-        "No. Telepon": s.parentPhone,
-        "Status SPP": s.tuitionStatus,
-        "Alamat / Asrama": s.address || "-",
-        "Catatan": s.notes || "-"
-      };
-    });
+    const exportRows = classStudents.map((s, idx) => ({
+      "No": idx + 1,
+      "Nama Siswa": s.name,
+      "Kelas": s.classGrade,
+      "Jenis Kelamin": s.gender === "P" ? "Perempuan" : "Laki-laki",
+      "Nama Orang Tua": s.parentName || "-"
+    }));
     const safeName = targetClassName.replace(/[^a-zA-Z0-9]/g, "_");
     exportToCSV(`Data_Siswa_${safeName}_${new Date().toISOString().split("T")[0]}.csv`, exportRows);
   };
@@ -429,31 +411,6 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       level,
       students: classStudents
     });
-  };
-
-  const handleOpenAddForClass = (targetClass: string, targetLevel: EducationLevel) => {
-    const nextNisn = `00${Math.floor(10000000 + Math.random() * 90000000)}`;
-    const nextNis = `2526${Math.floor(10000 + Math.random() * 90000)}`;
-    setFormData({
-      nisn: nextNisn,
-      nis: nextNis,
-      name: "",
-      gender: "L",
-      educationLevel: targetLevel,
-      classGrade: targetClass,
-      academicYear: "2025/2026",
-      status: "Aktif",
-      category: "Reguler",
-      parentName: "",
-      parentPhone: "08",
-      tuitionStatus: "Lunas",
-      averageGrade: 90,
-      achievementsCount: 0,
-      address: "",
-      notes: ""
-    });
-    setEditingStudent(null);
-    setIsAddModalOpen(true);
   };
 
   const toggleClassCollapse = (clsName: string) => {
@@ -496,285 +453,127 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const scholarshipTotal = filteredStudents.filter(s => s.category.includes("Beasiswa")).length;
 
   return (
-    <div className="space-y-4">
-      {/* Sleek Minimalist Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pb-0.5">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-purple-100 text-purple-700 border border-purple-200">
-              <GraduationCap className="w-5 h-5" />
+    <div className="space-y-6 max-w-7xl mx-auto pb-12 p-8 rounded-3xl bg-gradient-to-br from-blue-700 to-blue-600 text-white">
+      {/* Unified Top Header Card */}
+      <div className="bg-white/10 border border-white/20 rounded-2xl p-5 md:p-6 backdrop-blur-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-white/20 text-white flex items-center justify-center shrink-0 border border-white/30 shadow-lg">
+              <GraduationCap className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                <span>Data Peserta Didik</span>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
-                  {totalCount} Siswa
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-white tracking-tight">
+                  Data Peserta Didik & Santri
+                </h1>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white border border-white/20">
+                  {totalCount} Siswa Terdaftar
                 </span>
                 {activeRombelCount > 0 && (
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-[#1a1d21] dark:bg-[#1a1d21] text-slate-600 border border-slate-200">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/10 text-white border border-white/20">
                     {activeRombelCount} Rombel Aktif
                   </span>
                 )}
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-300">
-                Pusat data siswa dan pembagian rombel terpadu RA, SDIT, SMP, dan SMA.
+              </div>
+              <p className="text-xs text-blue-100 mt-1 max-w-3xl">
+                Pusat data siswa terpadu, pembagian rombongan belajar (rombel) RA, SDIT, SMP, SMA, kenaikan kelas dan kelulusan.
               </p>
             </div>
           </div>
-        </div>
 
-        {/* Action Buttons Group */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={handleExportCSV}
-            className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] border border-slate-200 hover:bg-slate-50 dark:bg-[#121417] dark:bg-[#121417] hover:border-slate-300 text-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-            title="Ekspor seluruh data siswa ke file CSV"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600" />
-            <span>Ekspor CSV</span>
-          </button>
-
-          {onNavigateToAlumni && (
+          {/* Action Buttons Group */}
+          <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={onNavigateToAlumni}
-              className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] hover:bg-indigo-50/60 text-slate-700 hover:text-indigo-700 border border-slate-200 hover:border-indigo-300 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-              title="Buka direktori Data Alumni"
+              onClick={handleExportCSV}
+              className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer border border-white/20 backdrop-blur-sm"
+              title="Ekspor seluruh data siswa ke file CSV"
             >
-              <Award className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Alumni {alumniCount > 0 ? `(${alumniCount})` : ""}</span>
+              <FileSpreadsheet className="w-3.5 h-3.5 text-white" />
+              <span>Ekspor CSV</span>
+            </button>
+
+            {onNavigateToAlumni && (
+              <button
+                onClick={onNavigateToAlumni}
+                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer border border-white/20 backdrop-blur-sm"
+                title="Buka direktori Data Alumni"
+              >
+                <Award className="w-3.5 h-3.5 text-white" />
+                <span>Alumni {alumniCount > 0 ? `(${alumniCount})` : ""}</span>
+              </button>
+            )}
+
+            <button
+              onClick={handleOpenBatchPromotion}
+              className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer border border-white/20 backdrop-blur-sm"
+              title="Proses Kenaikan Kelas & Kelulusan Tingkat Akhir"
+            >
+              <TrendingUp className="w-3.5 h-3.5 text-white" />
+              <span>Kenaikan Kelas</span>
+            </button>
+
+            <button
+              onClick={handleOpenAdd}
+              className="px-4 py-2 rounded-xl bg-white text-blue-700 text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer shadow-lg hover:bg-blue-50"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tambah Siswa</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Sleek Unified Control Bar */}
+      <div className="bg-white/10 rounded-2xl p-4 border border-white/20 flex flex-col md:flex-row md:items-center justify-between gap-3 backdrop-blur-sm">
+        {/* Search Box */}
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-white/70 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Cari nama peserta didik, kelas, nama wali, atau NISN..."
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
+            className="w-full pl-10 pr-9 py-2.5 text-xs md:text-sm bg-white/10 rounded-xl border border-white/20 text-white placeholder:text-white/60 focus:ring-2 focus:ring-white/30 outline-none transition-all"
+          />
+          {localSearch && (
+            <button
+              onClick={() => setLocalSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white cursor-pointer"
+              title="Hapus pencarian"
+            >
+              <X className="w-4 h-4" />
             </button>
           )}
-
-          <button
-            onClick={handleOpenBatchPromotion}
-            className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] hover:bg-blue-50 text-blue-700 border border-blue-300 hover:border-blue-400 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-            title="Proses Kenaikan Kelas & Kelulusan Tingkat Akhir"
-          >
-            <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
-            <span>Kenaikan Kelas</span>
-          </button>
-
-          <button
-            onClick={handleOpenAdd}
-            className="px-3.5 py-1.5 rounded-lg bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Tambah Siswa</span>
-          </button>
         </div>
-      </div>
 
-      {/* Unified Minimalist Toolbar Card */}
-      <div className="bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-xl border border-slate-200 shadow-2xs overflow-hidden divide-y divide-slate-100">
-        {/* Row 1: Segmented Jenjang Tabs & Search */}
-        <div className="p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/ dark:bg-[#121417]/50 dark:bg-[#121417]">
-          {/* Segmented Jenjang Tabs */}
-          <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl border border-slate-200/90 overflow-x-auto">
+        {/* View Mode Switcher */}
+        <div className="flex items-center p-1 rounded-xl bg-white/10 border border-white/20 shrink-0">
             <button
-              onClick={() => handleLevelChange("ALL")}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                levelFilter === "ALL"
-                  ? "bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] text-slate-900 shadow-xs font-bold"
-                  : "text-slate-600 hover:text-slate-900"
+              onClick={() => setViewMode("grouped")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === "grouped"
+                  ? "bg-white text-blue-700 shadow-lg"
+                  : "text-white/70 hover:text-white"
               }`}
+              title="Tampilkan Berdasarkan Rombongan Belajar (Rombel)"
             >
-              Semua ({totalCount})
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Per Rombel</span>
             </button>
-            {LEVELS.map((lvl) => {
-              const count = statsByLevel[lvl]?.count || 0;
-              const isSelected = levelFilter === lvl;
-              return (
-                <button
-                  key={lvl}
-                  onClick={() => handleLevelChange(lvl)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-                    isSelected
-                      ? "bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] text-purple-900 shadow-xs font-bold"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <span>{lvl}</span>
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                    isSelected ? "bg-purple-100 text-purple-800 font-bold" : "bg-slate-200/90 text-slate-600"
-                  }`}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Search Box */}
-          <div className="relative w-full md:w-72">
-            <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Cari nama, NISN, rombel..."
-              value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
-              className="w-full pl-8 pr-8 py-1.5 text-xs bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-lg border border-slate-200 text-slate-800 placeholder:text-slate-400 dark:text-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-colors"
-            />
-            {localSearch && (
-              <button
-                onClick={() => setLocalSearch("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-400 hover:text-slate-600 cursor-pointer"
-                title="Hapus pencarian"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+            <button
+              onClick={() => setViewMode("table")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === "table"
+                  ? "bg-white text-blue-700 shadow-lg"
+                  : "text-white/70 hover:text-white"
+              }`}
+              title="Tampilkan Semua dalam Tabel Induk Tunggal"
+            >
+              <List className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Tabel Induk</span>
+            </button>
           </div>
         </div>
-
-        {/* Row 2: Compact Filters, Summary Metrics & View Toggle */}
-        <div className="p-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Left: Compact Dropdown Filters */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Filter Kelas */}
-            <div className="flex items-center gap-1.5 text-xs text-slate-600">
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-300">Kelas:</span>
-              <select
-                value={classFilter}
-                onChange={(e) => setClassFilter(e.target.value)}
-                className={`text-xs py-1 px-2 rounded-lg border outline-none font-medium cursor-pointer transition-colors max-w-[150px] truncate ${
-                  classFilter !== "ALL"
-                    ? "bg-purple-50 text-purple-900 border-purple-300 font-semibold"
-                    : "bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] text-slate-700 border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                <option value="ALL">Semua Kelas ({currentLevelActiveStudents.length})</option>
-                {availableClasses.map((c) => {
-                  const stats = classStatsMap[c]?.total || 0;
-                  return (
-                    <option key={c} value={c}>
-                      {c} ({stats})
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            {/* Filter Kategori */}
-            <div className="flex items-center gap-1.5 text-xs text-slate-600">
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-300">Kategori:</span>
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className={`text-xs py-1 px-2 rounded-lg border outline-none font-medium cursor-pointer transition-colors max-w-[150px] truncate ${
-                  categoryFilter !== "ALL"
-                    ? "bg-purple-50 text-purple-900 border-purple-300 font-semibold"
-                    : "bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] text-slate-700 border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                <option value="ALL">Semua Kategori</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filter Status SPP */}
-            <div className="flex items-center gap-1.5 text-xs text-slate-600">
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-300">SPP:</span>
-              <select
-                value={tuitionFilter}
-                onChange={(e) => setTuitionFilter(e.target.value)}
-                className={`text-xs py-1 px-2 rounded-lg border outline-none font-medium cursor-pointer transition-colors max-w-[140px] truncate ${
-                  tuitionFilter !== "ALL"
-                    ? "bg-purple-50 text-purple-900 border-purple-300 font-semibold"
-                    : "bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] text-slate-700 border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                <option value="ALL">Semua Status SPP</option>
-                {TUITION_STATUSES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Reset Filter Button */}
-            {(classFilter !== "ALL" || categoryFilter !== "ALL" || tuitionFilter !== "ALL" || localSearch !== "") && (
-              <button
-                onClick={() => {
-                  setClassFilter("ALL");
-                  setCategoryFilter("ALL");
-                  setTuitionFilter("ALL");
-                  setLocalSearch("");
-                }}
-                className="text-xs px-2 py-1 rounded-md text-rose-600 hover:bg-rose-50 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
-                title="Reset semua filter"
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span>Reset</span>
-              </button>
-            )}
-          </div>
-
-          {/* Right: Metrics & View Mode Switcher */}
-          <div className="flex items-center gap-3 justify-between lg:justify-end border-t lg:border-t-0 pt-2 lg:pt-0 border-slate-100">
-            {/* Quick Metrics */}
-            <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
-              <span className="font-bold text-slate-800">{filteredStudents.length} Siswa</span>
-              <span className="text-slate-400 dark:text-slate-400 text-[11px]">({boysTotal} L • {girlsTotal} P)</span>
-              <span className="text-slate-200">|</span>
-              <span className="text-emerald-700 font-semibold">{tuitionPaidTotal} Lunas</span>
-              {scholarshipTotal > 0 && (
-                <>
-                  <span className="text-slate-200">|</span>
-                  <span className="text-amber-700 font-semibold">{scholarshipTotal} Beasiswa</span>
-                </>
-              )}
-            </div>
-
-            {/* Expand / Collapse All (Grouped Mode Only) */}
-            {viewMode === "grouped" && allRenderedClassNames.length > 1 && (
-              <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-300">
-                <button
-                  onClick={handleExpandAll}
-                  className="hover:text-purple-600 font-medium px-1.5 py-0.5 rounded hover:bg-slate-100 dark:bg-[#1a1d21] dark:bg-[#1a1d21] transition-colors cursor-pointer"
-                >
-                  Buka Semua
-                </button>
-                <span>•</span>
-                <button
-                  onClick={handleCollapseAll}
-                  className="hover:text-purple-600 font-medium px-1.5 py-0.5 rounded hover:bg-slate-100 dark:bg-[#1a1d21] dark:bg-[#1a1d21] transition-colors cursor-pointer"
-                >
-                  Tutup Semua
-                </button>
-              </div>
-            )}
-
-            {/* View Mode Switcher */}
-            <div className="flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-[#1a1d21] dark:bg-[#1a1d21] border border-slate-200">
-              <button
-                onClick={() => setViewMode("grouped")}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                  viewMode === "grouped"
-                    ? "bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] text-purple-700 shadow-2xs font-bold"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-                title="Kelompokkan siswa per rombel kelas"
-              >
-                <LayoutGrid className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Per Rombel</span>
-              </button>
-              <button
-                onClick={() => setViewMode("table")}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                  viewMode === "table"
-                    ? "bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] text-purple-700 shadow-2xs font-bold"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-                title="Tampilkan seluruh data dalam tabel lengkap"
-              >
-                <List className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Tabel Lengkap</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Alumni Notice Banner */}
       {alumniCount > 0 && (
@@ -847,14 +646,14 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
               return (
                 <div
                   key={clsName}
-                  className="bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-xl border border-slate-200 shadow-2xs overflow-hidden transition-all"
+                  className="bg-white/10 border border-white/20 rounded-2xl overflow-hidden transition-all backdrop-blur-sm"
                 >
                   {/* Class Card Header */}
-                  <div className="px-4 py-3.5 bg-slate-50/ dark:bg-[#121417]/90 dark:bg-[#1a1d21] border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div className="px-4 py-3.5 bg-white/5 border-b border-white/20 flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => toggleClassCollapse(clsName)}
-                        className="p-1 rounded-md hover:bg-slate-200 text-slate-500 dark:text-slate-300 transition-colors cursor-pointer"
+                        className="p-1 rounded-md hover:bg-white/20 text-white/70 transition-colors cursor-pointer"
                         title={isCollapsed ? "Buka rincian rombel" : "Tutup rincian rombel"}
                       >
                         {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
@@ -862,34 +661,19 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-                            <School className="w-4 h-4 text-purple-600" />
+                          <h3 className="font-bold text-white text-sm flex items-center gap-1.5">
+                            <School className="w-4 h-4 text-blue-200" />
                             <span>{clsName}</span>
                           </h3>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${levelDetail.badge}`}>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold border bg-white/20 text-white border-white/20">
                             {levelDetail.label}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500 dark:text-slate-300 flex-wrap">
+                        <div className="flex items-center gap-2 mt-1 text-[11px] text-blue-100 flex-wrap">
                           <span>
-                            <strong className="text-slate-800 font-semibold">{classStudents.length}</strong> Siswa Terdaftar
-                            <span className="text-slate-400 dark:text-slate-400 font-normal"> ({stats.boys} L • {stats.girls} P)</span>
+                            <strong className="text-white font-semibold">{classStudents.length}</strong> Siswa
+                            <span className="text-blue-100/70 font-normal"> ({stats.boys} L • {stats.girls} P)</span>
                           </span>
-                          <span>•</span>
-                          <span>
-                            SPP: <strong className="text-emerald-700 font-semibold">{stats.tuitionPaid} Lunas</strong>
-                            {stats.tuitionUnpaid > 0 && (
-                              <span className="text-rose-600 font-semibold ml-1">({stats.tuitionUnpaid} Nunggak)</span>
-                            )}
-                          </span>
-                          {stats.scholarships > 0 && (
-                            <>
-                              <span>•</span>
-                              <span className="text-amber-700 font-semibold">
-                                {stats.scholarships} Beasiswa
-                              </span>
-                            </>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -898,25 +682,25 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                     <div className="flex items-center gap-1.5 self-end md:self-auto flex-wrap">
                       <button
                         onClick={() => handleOpenPrintClass(clsName, level, classStudents)}
-                        className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] border border-slate-200 hover:bg-slate-100 dark:bg-[#1a1d21] dark:bg-[#1a1d21] text-slate-700 text-xs font-semibold flex items-center gap-1 transition-colors shadow-2xs cursor-pointer"
-                        title="Cetak format daftar hadir & rekap presensi kelas resmi"
+                        className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors border border-white/20 cursor-pointer"
+                        title="Cetak format daftar hadir & presensi siswa"
                       >
-                        <Printer className="w-3.5 h-3.5 text-purple-600" />
+                        <Printer className="w-3.5 h-3.5" />
                         <span>Cetak Presensi</span>
                       </button>
                       <button
                         onClick={() => handleExportClassCSV(clsName, classStudents)}
                         disabled={classStudents.length === 0}
-                        className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] border border-slate-200 hover:bg-slate-100 dark:bg-[#1a1d21] dark:bg-[#1a1d21] text-slate-700 text-xs font-semibold flex items-center gap-1 transition-colors shadow-2xs disabled:opacity-40 cursor-pointer"
-                        title="Unduh data siswa kelas ini dalam file Excel / CSV"
+                        className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors border border-white/20 disabled:opacity-40 cursor-pointer"
+                        title="Unduh data siswa kelas ini ke CSV"
                       >
-                        <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600" />
+                        <FileSpreadsheet className="w-3.5 h-3.5" />
                         <span>Ekspor CSV</span>
                       </button>
                       <button
                         onClick={() => handleOpenAddForClass(clsName, level)}
-                        className="px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                        title="Daftarkan siswa baru langsung ke rombel ini"
+                        className="px-3 py-1.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                        title="Tambah siswa ke kelas ini"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Tambah Siswa</span>
@@ -927,26 +711,25 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                   {/* Class Table Body */}
                   {!isCollapsed && (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs text-slate-700">
-                        <thead className="bg-slate-50/ dark:bg-[#121417]/50 dark:bg-[#121417] text-slate-500 dark:text-slate-300 font-semibold border-b border-slate-200">
+                      <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+                        <thead className="bg-slate-50 dark:bg-[#121417] text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800 text-[11px] uppercase tracking-wider">
                           <tr>
-                            <th className="px-4 py-2.5 w-10 text-center">No</th>
-                            <th className="px-4 py-2.5">NISN / NIS & Nama Siswa</th>
-                            <th className="px-4 py-2.5">Kategori Binaan</th>
-                            <th className="px-4 py-2.5">Wali & Kontak</th>
-                            <th className="px-4 py-2.5">Status SPP</th>
-                            <th className="px-4 py-2.5 text-right">Aksi</th>
+                            <th className="px-4 py-2.5 w-12 text-center">No</th>
+                            <th className="px-4 py-2.5">Nama Siswa</th>
+                            <th className="px-4 py-2.5 w-32 text-center">Jenis Kelamin</th>
+                            <th className="px-4 py-2.5">Nama Orang Tua</th>
+                            <th className="px-4 py-2.5 text-right w-24">Aksi</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                           {classStudents.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="px-4 py-6 text-center text-slate-400 dark:text-slate-400 bg-slate-50/ dark:bg-[#121417]/30 dark:bg-[#121417]">
+                              <td colSpan={5} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-900/20">
                                 <div className="space-y-1.5">
-                                  <p>Belum ada data peserta didik yang terdaftar di <strong>{clsName}</strong>.</p>
+                                  <p>Belum ada data siswa di <strong>{clsName}</strong>.</p>
                                   <button
                                     onClick={() => handleOpenAddForClass(clsName, level)}
-                                    className="text-xs text-blue-600 hover:text-blue-700 font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                    className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
                                   >
                                     <Plus className="w-3.5 h-3.5" />
                                     <span>Tambahkan Siswa Pertama ke {clsName}</span>
@@ -957,74 +740,39 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                           ) : (
                             classStudents.map((std, idx) => {
                               return (
-                                <tr key={std.id} className="hover:bg-slate-50/ dark:bg-[#121417]/80 transition-colors">
-                                  <td className="px-4 py-3 text-center font-medium text-slate-400 dark:text-slate-400">
+                                <tr key={std.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                  <td className="px-4 py-3 text-center font-medium text-slate-400 dark:text-slate-500">
                                     {idx + 1}
                                   </td>
-                                  <td className="px-4 py-3">
-                                    <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                                      <span>{std.name}</span>
-                                      <span className="text-[10px] text-slate-400 dark:text-slate-400 font-semibold">({std.gender})</span>
-                                    </div>
-                                    <div className="text-[11px] font-mono text-purple-700 font-medium">
-                                      NISN: {std.nisn} • NIS: {std.nis}
-                                    </div>
+                                  <td className="px-4 py-3 font-bold text-slate-900 dark:text-white text-sm">
+                                    {std.name}
                                   </td>
-                                  <td className="px-4 py-3">
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                                      std.category.includes("Beasiswa")
-                                        ? "bg-purple-50 text-purple-700 border-purple-200"
-                                        : std.category.includes("Asrama")
-                                        ? "bg-teal-50 text-teal-700 border-teal-200"
-                                        : "bg-slate-100 dark:bg-[#1a1d21] dark:bg-[#1a1d21] text-slate-700 border-slate-200"
+                                  <td className="px-4 py-3 text-center">
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                                      std.gender === "P"
+                                        ? "bg-pink-50 text-pink-700 dark:bg-pink-950/50 dark:text-pink-300 border border-pink-200 dark:border-pink-900"
+                                        : "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200 dark:border-blue-900"
                                     }`}>
-                                      {std.category}
+                                      {std.gender === "P" ? "Perempuan" : "Laki-laki"}
                                     </span>
                                   </td>
-                                  <td className="px-4 py-3 space-y-0.5">
-                                    <div className="font-medium text-slate-800">{std.parentName || "-"}</div>
-                                    <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-300">
-                                      <Phone className="w-2.5 h-2.5" />
-                                      <span>{std.parentPhone || "-"}</span>
-                                    </div>
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                                      std.tuitionStatus === "Lunas" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                                      std.tuitionStatus === "Gratis (Beasiswa)" ? "bg-purple-50 text-purple-700 border-purple-200" :
-                                      "bg-rose-50 text-rose-700 border-rose-200"
-                                    }`}>
-                                      {std.tuitionStatus}
-                                    </span>
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <div className="font-bold text-slate-900 font-mono">Nilai: {std.averageGrade}</div>
-                                    <div className="text-[10px] text-amber-600 font-semibold flex items-center gap-1">
-                                      <Award className="w-3 h-3" />
-                                      {std.achievementsCount} Prestasi
-                                    </div>
+                                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">
+                                    {std.parentName || "-"}
                                   </td>
                                   <td className="px-4 py-3 text-right">
                                     <div className="flex items-center justify-end gap-1">
                                       <button
-                                        onClick={() => handleOpenSinglePromotion(std)}
-                                        title="Proses Kenaikan Kelas / Kelulusan Siswa"
-                                        className="p-1.5 text-slate-500 dark:text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                                      >
-                                        <TrendingUp className="w-4 h-4" />
-                                      </button>
-                                      <button
                                         onClick={() => handleOpenEdit(std)}
-                                        title="Edit Peserta Didik"
-                                        className="p-1.5 text-slate-500 dark:text-slate-300 hover:text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
+                                        title="Edit Siswa"
+                                        className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors cursor-pointer"
                                       >
                                         <Edit3 className="w-4 h-4" />
                                       </button>
                                       <button
                                         id={`btn-delete-student-${std.id}`}
                                         onClick={() => setStudentToDelete(std)}
-                                        title="Hapus Peserta Didik"
-                                        className="p-1.5 text-slate-400 dark:text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
+                                        title="Hapus Siswa"
+                                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
                                       >
                                         <Trash2 className="w-4 h-4" />
                                       </button>
@@ -1045,107 +793,67 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         </div>
       ) : (
         /* Full Unified Table View */
-        <div className="bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div className="bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700">
-              <thead className="bg-slate-50 dark:bg-[#121417] dark:bg-[#121417] text-slate-600 font-semibold border-b border-slate-200">
+            <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+              <thead className="bg-slate-50 dark:bg-[#121417] text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800 text-[11px] uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-3">NISN / NIS & Nama</th>
-                  <th className="px-4 py-3">Kelas / Rombel</th>
-                  <th className="px-4 py-3">Jenjang Peserta Didik</th>
-                  <th className="px-4 py-3">Kategori Binaan</th>
-                  <th className="px-4 py-3">Wali & Kontak</th>
-                  <th className="px-4 py-3">Status SPP</th>
-                  <th className="px-4 py-3 text-right">Aksi</th>
+                  <th className="px-4 py-3 w-12 text-center">No</th>
+                  <th className="px-4 py-3">Nama Siswa</th>
+                  <th className="px-4 py-3 w-32">Kelas</th>
+                  <th className="px-4 py-3 w-32 text-center">Jenis Kelamin</th>
+                  <th className="px-4 py-3">Nama Orang Tua</th>
+                  <th className="px-4 py-3 text-right w-24">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-slate-400 dark:text-slate-400">
-                      Tidak ada data peserta didik yang sesuai dengan pembagian jenjang atau pencarian saat ini.
+                    <td colSpan={6} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
+                      Tidak ada data siswa yang sesuai dengan filter atau pencarian saat ini.
                     </td>
                   </tr>
                 ) : (
-                  filteredStudents.map((std) => {
-                    const lvl = normalizeLevel(std.educationLevel);
-                    const detail = LEVEL_DETAILS[lvl];
-
+                  filteredStudents.map((std, idx) => {
                     return (
-                      <tr key={std.id} className="hover:bg-slate-50/ dark:bg-[#121417]/80 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                            <span>{std.name}</span>
-                            <span className="text-[10px] text-slate-400 dark:text-slate-400 font-semibold">({std.gender})</span>
-                          </div>
-                          <div className="text-[11px] font-mono text-purple-700 font-medium">
-                            NISN: {std.nisn} • NIS: {std.nis}
-                          </div>
+                      <tr key={std.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="px-4 py-3 text-center font-medium text-slate-400 dark:text-slate-500">
+                          {idx + 1}
                         </td>
-                        <td className="px-4 py-3 font-semibold text-slate-800">
-                          <div className="flex items-center gap-1">
-                            <School className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                            <span>{std.classGrade}</span>
-                          </div>
-                          <div className="text-[10px] text-slate-500 dark:text-slate-300 font-normal">
-                            TA {std.academicYear}
-                          </div>
+                        <td className="px-4 py-3 font-bold text-slate-900 dark:text-white text-sm">
+                          {std.name}
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${detail.badge}`}>
-                              {detail.label}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                            std.category.includes("Beasiswa")
-                              ? "bg-purple-50 text-purple-700 border-purple-200"
-                              : std.category.includes("Asrama")
-                              ? "bg-teal-50 text-teal-700 border-teal-200"
-                              : "bg-slate-100 dark:bg-[#1a1d21] dark:bg-[#1a1d21] text-slate-700 border-slate-200"
-                          }`}>
-                            {std.category}
+                        <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-900/50 font-bold text-xs">
+                            {std.classGrade}
                           </span>
                         </td>
-                        <td className="px-4 py-3 space-y-0.5">
-                          <div className="font-medium text-slate-800">{std.parentName || "-"}</div>
-                          <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-300">
-                            <Phone className="w-2.5 h-2.5" />
-                            <span>{std.parentPhone || "-"}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                            std.tuitionStatus === "Lunas" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                            std.tuitionStatus === "Gratis (Beasiswa)" ? "bg-purple-50 text-purple-700 border-purple-200" :
-                            "bg-rose-50 text-rose-700 border-rose-200"
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                            std.gender === "P"
+                              ? "bg-pink-50 text-pink-700 dark:bg-pink-950/50 dark:text-pink-300 border border-pink-200 dark:border-pink-900"
+                              : "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200 dark:border-blue-900"
                           }`}>
-                            {std.tuitionStatus}
+                            {std.gender === "P" ? "Perempuan" : "Laki-laki"}
                           </span>
+                        </td>
+                        <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">
+                          {std.parentName || "-"}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button
-                              onClick={() => handleOpenSinglePromotion(std)}
-                              title="Proses Kenaikan Kelas / Kelulusan Siswa"
-                              className="p-1.5 text-slate-500 dark:text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                            >
-                              <TrendingUp className="w-4 h-4" />
-                            </button>
-                            <button
                               onClick={() => handleOpenEdit(std)}
-                              title="Edit Peserta Didik"
-                              className="p-1.5 text-slate-500 dark:text-slate-300 hover:text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
+                              title="Edit Siswa"
+                              className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors cursor-pointer"
                             >
                               <Edit3 className="w-4 h-4" />
                             </button>
                             <button
                               id={`btn-delete-student-tbl-${std.id}`}
                               onClick={() => setStudentToDelete(std)}
-                              title="Hapus Peserta Didik"
-                              className="p-1.5 text-slate-400 dark:text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
+                              title="Hapus Siswa"
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1163,241 +871,126 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 
       {/* Add / Edit Student Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-start justify-center p-4 py-10 overflow-y-auto">
-          <div className="bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 my-8">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <GraduationCap className="w-5 h-5 text-purple-600" />
-                {editingStudent ? "Edit Data Peserta Didik" : "Registrasi Peserta Didik / Santri Baru"}
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <GraduationCap className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                {editingStudent ? "Edit Data Siswa" : "Tambah Siswa Baru"}
               </h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 dark:text-slate-400 hover:text-slate-600">
+              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleFormSubmit} className="mt-4 space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">NISN (Nomor Induk Siswa Nasional)</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.nisn}
-                    onChange={(e) => setFormData({ ...formData, nisn: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                    placeholder="Contoh: 0098765432"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">NIS Lokal Yayasan</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.nis}
-                    onChange={(e) => setFormData({ ...formData, nis: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                    placeholder="Contoh: 242501001"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block font-semibold text-slate-700 mb-1">Nama Lengkap Peserta Didik</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none focus:border-purple-500"
-                    placeholder="Contoh: Muhammad Rayhan Al-Ghifari"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Jenis Kelamin</label>
-                  <select
-                    value={formData.gender}
-                    onChange={(e) => setFormData({ ...formData, gender: e.target.value as "L" | "P" })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none focus:border-purple-500"
-                  >
-                    <option value="L">Laki-laki (L)</option>
-                    <option value="P">Perempuan (P)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Jenjang Peserta Didik</label>
-                  <select
-                    value={formData.educationLevel}
-                    onChange={(e) => {
-                      const newLvl = e.target.value as EducationLevel;
-                      setFormData(prev => ({
-                        ...prev,
-                        educationLevel: newLvl,
-                        classGrade: LEVEL_DETAILS[newLvl].classSuggestions[0] || prev.classGrade
-                      }));
-                    }}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none focus:border-purple-500 font-medium"
-                  >
-                    {LEVELS.map(l => (
-                      <option key={l} value={l}>
-                        {LEVEL_DETAILS[l].label} ({l})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Kelas / Rombel Resmi <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={formData.classGrade}
-                    onChange={(e) => setFormData({ ...formData, classGrade: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none focus:border-purple-500 font-bold bg-white dark:bg-[#1a1d21] dark:border-[#2b3036] dark:bg-[#1a1d21] dark:border-[#2b3036] text-slate-800"
-                  >
-                    {LEVEL_DETAILS[formData.educationLevel]?.classSuggestions.map((cls) => (
-                      <option key={cls} value={cls}>
-                        {cls}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                    {LEVEL_DETAILS[formData.educationLevel]?.classSuggestions.map((sug) => (
-                      <button
-                        type="button"
-                        key={sug}
-                        onClick={() => setFormData({ ...formData, classGrade: sug })}
-                        className={`text-xs px-2.5 py-1 rounded-md border transition-colors cursor-pointer ${
-                          formData.classGrade === sug
-                            ? "bg-purple-100 text-purple-800 border-purple-300 font-bold shadow-2xs"
-                            : "bg-slate-50 dark:bg-[#121417] dark:bg-[#121417] text-slate-600 border-slate-200 hover:bg-slate-100 dark:bg-[#1a1d21] dark:bg-[#1a1d21] font-medium"
-                        }`}
-                      >
-                        {sug}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Tahun Ajaran</label>
-                  <input
-                    type="text"
-                    value={formData.academicYear}
-                    onChange={(e) => setFormData({ ...formData, academicYear: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none focus:border-purple-500"
-                    placeholder="2025/2026"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Status Keaktifan</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none focus:border-purple-500 font-medium text-xs"
-                  >
-                    <option value="Aktif">Aktif</option>
-                    <option value="Lulus">Lulus (Pindah ke Menu Alumni)</option>
-                    <option value="Pindah / Mutasi">Pindah / Mutasi</option>
-                    <option value="Cuti / Nonaktif">Cuti / Nonaktif</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Kategori Binaan</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value as StudentCategory })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none focus:border-purple-500 text-xs"
-                  >
-                    {CATEGORIES.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Status Pembayaran SPP</label>
-                  <select
-                    value={formData.tuitionStatus}
-                    onChange={(e) => setFormData({ ...formData, tuitionStatus: e.target.value as TuitionStatus })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none focus:border-purple-500 text-xs"
-                  >
-                    {TUITION_STATUSES.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              {formData.status === "Lulus" && (
-                <div className="p-2.5 rounded-lg bg-indigo-50 border border-indigo-200 text-xs text-indigo-900 flex items-center gap-2">
-                  <Award className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <span>
-                    Siswa dengan status <strong>Lulus</strong> akan otomatis dialihkan ke <strong>Menu Data Alumni</strong>.
-                  </span>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Nama Orang Tua / Wali</label>
-                  <input
-                    type="text"
-                    value={formData.parentName}
-                    onChange={(e) => setFormData({ ...formData, parentName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none focus:border-purple-500"
-                    placeholder="Contoh: Bapak Hendra Gunawan"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">No. Kontak / WA Wali</label>
-                  <input
-                    type="text"
-                    value={formData.parentPhone}
-                    onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none focus:border-purple-500"
-                    placeholder="0812-xxxx-xxxx"
-                  />
-                </div>
-              </div>
-
+              {/* 1. Nama Siswa */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Alamat Tempat Tinggal / Kamar Asrama</label>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Nama Lengkap Siswa <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="text"
-                  value={formData.address || ""}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none focus:border-purple-500"
-                  placeholder="Alamat rumah atau lokasi kamar santri mukim..."
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#121417] text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all"
+                  placeholder="Contoh: Muhammad Rayhan"
                 />
               </div>
 
+              {/* 2. Kelas */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Catatan Khusus / Riwayat Prestasi</label>
-                <textarea
-                  rows={2}
-                  value={formData.notes || ""}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none focus:border-purple-500"
-                  placeholder="Catatan hafalan Qur'an, prestasi lomba, atau beasiswa..."
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Kelas / Rombel <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={formData.classGrade}
+                  onChange={(e) => setFormData({ ...formData, classGrade: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-bold bg-white dark:bg-[#121417] text-slate-800 dark:text-slate-200 text-sm cursor-pointer"
+                >
+                  {STANDARD_CLASS_ORDER.map((cls) => (
+                    <option key={cls} value={cls}>
+                      {cls}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                  {availableClasses.slice(0, 8).map((sug) => (
+                    <button
+                      type="button"
+                      key={sug}
+                      onClick={() => setFormData({ ...formData, classGrade: sug })}
+                      className={`text-xs px-2.5 py-1 rounded-lg border transition-colors cursor-pointer ${
+                        formData.classGrade === sug
+                          ? "bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-800 font-bold shadow-2xs"
+                          : "bg-slate-50 dark:bg-[#121417] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 font-medium"
+                      }`}
+                    >
+                      {sug}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Jenis Kelamin */}
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Jenis Kelamin <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, gender: "L" })}
+                    className={`py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all cursor-pointer ${
+                      formData.gender === "L"
+                        ? "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-400"
+                        : "bg-slate-50 dark:bg-[#121417] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    Laki-laki (L)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, gender: "P" })}
+                    className={`py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all cursor-pointer ${
+                      formData.gender === "P"
+                        ? "bg-pink-50 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 border-pink-400"
+                        : "bg-slate-50 dark:bg-[#121417] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    Perempuan (P)
+                  </button>
+                </div>
+              </div>
+
+              {/* 4. Nama Orang Tua */}
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Nama Orang Tua / Wali
+                </label>
+                <input
+                  type="text"
+                  value={formData.parentName}
+                  onChange={(e) => setFormData({ ...formData, parentName: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#121417] text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all"
+                  placeholder="Contoh: Hendra Gunawan"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-100 dark:bg-[#1a1d21] dark:bg-[#1a1d21] hover:bg-slate-200 text-slate-700 font-semibold"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold cursor-pointer transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer transition-colors shadow-xs shadow-blue-500/20"
                 >
-                  {editingStudent ? "Simpan Perubahan" : "Tambah ke Database"}
+                  {editingStudent ? "Simpan Perubahan" : "Tambah Siswa"}
                 </button>
               </div>
             </form>

@@ -283,6 +283,32 @@ export interface DonationRecord {
   notes?: string;
 }
 
+// --- Modul Laporan Bantuan (Daerah - Desa - Kelompok) ---
+export type AidReportType = 'DAERAH' | 'DESA' | 'KELOMPOK';
+
+export interface AidReport {
+  id: string;
+  // Halaman / Langkah 1: Wilayah & Waktu
+  aidType: AidReportType; // DAERAH - DESA - KELOMPOK
+  targetName: string; // Nama Desa atau Kelompok (atau Daerah)
+  receivedMonth: string; // Januari s.d. Desember
+  receivedYear: number; // Tahun penerimaan bantuan
+
+  // Halaman / Langkah 2: Rincian Bantuan & Realisasi
+  aidName: string; // Nama Bantuan
+  centralAidAmount: number; // Total Bantuan dari Pusat (Rp)
+  realizationUsage: string; // Realisasi Kegunaan (Penjelasan penggunaan dana)
+  budgetPlanAmount: number; // Rencana Anggaran Biaya (RAB) (Rp)
+  congregationCharityAmount: number; // Shodaqoh Jamaah (Rp)
+  photoBefore?: string; // Upload Foto Sebelum (Base64 data / URL)
+  photoAfter?: string; // Upload Foto Sesudah (Base64 data / URL)
+
+  // Catatan & Metadata
+  reporterName?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
 
 export type MeetingCategory = 'Rapat Pembina' | 'Rapat Pengurus' | 'Musyawarah Yayasan' | 'Lainnya';
 
@@ -308,6 +334,7 @@ export interface SheetsConfig {
 
 export interface DatabaseStore {
   donations: DonationRecord[];
+  aidReports?: AidReport[];
   profile: FoundationProfile;
   assets: AssetItem[];
   assetTransfers: AssetTransferRecord[];
@@ -321,4 +348,4 @@ export interface DatabaseStore {
   sheetsConfig?: SheetsConfig;
 }
 
-export type ActiveTab = 'dashboard' | 'assets' | 'employees' | 'students' | 'alumni' | 'donations' | 'meetings' | 'admin-performance' | 'ai-assistant' | 'settings';
+export type ActiveTab = 'dashboard' | 'assets' | 'employees' | 'students' | 'alumni' | 'donations' | 'aid-reports' | 'meetings' | 'admin-performance' | 'ai-assistant' | 'settings';

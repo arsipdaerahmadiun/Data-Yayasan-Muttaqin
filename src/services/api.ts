@@ -1,4 +1,4 @@
-import { DatabaseStore, AssetItem, AssetTransferRecord, SyncHistoryItem, AuditLogItem, StudentItem, EducationLevel } from "../types";
+import { DatabaseStore, AssetItem, AssetTransferRecord, SyncHistoryItem, AuditLogItem, StudentItem, EducationLevel, AidReport } from "../types";
 
 const LOCAL_STORAGE_KEY = "yayasan_database_store_v1";
 
@@ -31,7 +31,9 @@ export const DEFAULT_DATABASE: DatabaseStore = {
       quantity: 1250,
       unit: "M2",
       condition: "Baik",
-      location: "Kampus Utama - Blok Timur",
+      location: "Kampus Utama, Kelompok Josenan",
+      village: "Desa Taman",
+      district: "Kecamatan Taman",
       custodian: "H. Ridwan Santoso (Div. Sarpras)",
       notes: "Sertifikat Hak Milik Wakaf No. 441. Legalitas lengkap dan terdaftar di Kantor Pertanahan BPN.",
       lastAuditDate: "2026-08-15",
@@ -55,7 +57,8 @@ export const DEFAULT_DATABASE: DatabaseStore = {
       quantity: 600,
       unit: "M2",
       condition: "Baik",
-      location: "Kompleks Pesantren Blok Barat",
+      location: "Kompleks Pesantren Blok Barat, Kelompok Taman",
+      village: "Desa Taman",
       custodian: "Ust. Kholilur Rahman, Lc.",
       notes: "Proses konversi sertifikat wakaf dan pemecahan bidang di BPN melalui Notaris Hj. Ratna, S.H.",
       lastAuditDate: "2026-08-15",
@@ -178,7 +181,8 @@ export const DEFAULT_DATABASE: DatabaseStore = {
       quantity: 2400,
       unit: "M2",
       condition: "Baik",
-      location: "Desa Sukamaju, Madiun",
+      location: "Sentra Pertanian Organik, Kelompok Mentawai",
+      village: "Desa Mentawai",
       custodian: "Pengurus Unit Wakaf Produktif",
       notes: "Dikelola untuk unit agribisnis ketahanan pangan santri dan pembibitan sayur organik.",
       lastAuditDate: "2026-08-01",
@@ -486,7 +490,7 @@ export const DEFAULT_DATABASE: DatabaseStore = {
       tuitionStatus: "Gratis (Beasiswa)",
       averageGrade: 94.5,
       achievementsCount: 4,
-      address: "Jl. Melati No. 12, Jakarta Timur",
+      address: "Jl. Melati No. 12, Kelompok Taman, Desa Taman",
       notes: "Juara 1 Olimpiade Sains Tingkat Provinsi 2025"
     },
     {
@@ -505,7 +509,7 @@ export const DEFAULT_DATABASE: DatabaseStore = {
       tuitionStatus: "Lunas",
       averageGrade: 91.8,
       achievementsCount: 2,
-      address: "Kompleks Griya Asri Blok C4",
+      address: "Kompleks Griya Asri Blok C4, Kelompok Josenan, Desa Taman",
       notes: "Ketua OSIS SMA Periode 2025/2026"
     },
     {
@@ -524,7 +528,7 @@ export const DEFAULT_DATABASE: DatabaseStore = {
       tuitionStatus: "Lunas",
       averageGrade: 88.4,
       achievementsCount: 3,
-      address: "Kamar Asrama Umar Bin Khattab No. 04",
+      address: "Kamar Asrama Umar Bin Khattab No. 04, Kelompok Sawojajar, Desa Mentawai",
       notes: "Hafalan 12 Juz Al-Qur'an mutqin"
     },
     {
@@ -543,7 +547,7 @@ export const DEFAULT_DATABASE: DatabaseStore = {
       tuitionStatus: "Gratis (Beasiswa)",
       averageGrade: 89.2,
       achievementsCount: 1,
-      address: "Jl. Kramat Jati No. 88",
+      address: "Jl. Kramat Jati No. 88, Kelompok Dolopo, Desa Caruban",
       notes: "Binaan Program Peduli Anak Yatim Yayasan"
     },
     {
@@ -964,7 +968,69 @@ export const DEFAULT_DATABASE: DatabaseStore = {
     }
   ],
   donations: [],
-  meetings: []
+  meetings: [],
+  aidReports: [
+    {
+      id: "aid-001",
+      aidType: "DESA",
+      targetName: "Desa Taman",
+      receivedMonth: "Februari",
+      receivedYear: 2026,
+      aidName: "Renovasi Asrama Santri & Sarana Air Bersih",
+      centralAidAmount: 45000000,
+      realizationUsage: "Pemasangan instalasi tandon air kapasitas 2.000L, perbaikan atap bocor kamar asrama santri putra, dan pengadaan lantai keramik 60x60cm.",
+      budgetPlanAmount: 52000000,
+      congregationCharityAmount: 8500000,
+      photoBefore: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='400' height='300' fill='%23f1f5f9'/><rect x='80' y='120' width='240' height='130' fill='%2394a3b8'/><polygon points='60,120 200,50 340,120' fill='%2364748b'/><rect x='110' y='160' width='40' height='40' fill='%23cbd5e1'/><rect x='230' y='160' width='50' height='90' fill='%23475569'/><text x='200' y='275' font-size='13' font-family='sans-serif' fill='%23dc2626' font-weight='bold' text-anchor='middle'>FOTO SEBELUM (Kondisi Awal Rusak)</text></svg>",
+      photoAfter: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='400' height='300' fill='%23ecfdf5'/><rect x='80' y='110' width='240' height='140' fill='%2310b981'/><polygon points='60,110 200,40 340,110' fill='%23059669'/><rect x='110' y='150' width='50' height='50' fill='%23a7f3d0'/><rect x='230' y='150' width='50' height='100' fill='%23047857'/><text x='200' y='275' font-size='13' font-family='sans-serif' fill='%23059669' font-weight='bold' text-anchor='middle'>FOTO SESUDAH (Selesai Renovasi 100%25)</text></svg>",
+      reporterName: "Fahmi Maulana Dwi, S.Kom.",
+      createdAt: "2026-02-18T10:30:00.000Z"
+    },
+    {
+      id: "aid-002",
+      aidType: "KELOMPOK",
+      targetName: "Kelompok Taman",
+      receivedMonth: "Januari",
+      receivedYear: 2026,
+      aidName: "Bantuan Pavingisasi & Penataan Halaman Majelis",
+      centralAidAmount: 30000000,
+      realizationUsage: "Pemasangan paving block K-300 seluas 350 m2 untuk halaman parkir dan akses jamaah.",
+      budgetPlanAmount: 36000000,
+      congregationCharityAmount: 7200000,
+      photoBefore: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='400' height='300' fill='%23fef3c7'/><ellipse cx='200' cy='180' rx='140' ry='60' fill='%23d97706'/><text x='200' y='275' font-size='13' font-family='sans-serif' fill='%23b45309' font-weight='bold' text-anchor='middle'>FOTO SEBELUM (Halaman Berlumpur)</text></svg>",
+      photoAfter: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='400' height='300' fill='%23eff6ff'/><rect x='60' y='120' width='280' height='110' fill='%233b82f6' rx='8'/><text x='200' y='275' font-size='13' font-family='sans-serif' fill='%231d4ed8' font-weight='bold' text-anchor='middle'>FOTO SESUDAH (Paving Block Rapi)</text></svg>",
+      reporterName: "Fahmi Maulana Dwi, S.Kom.",
+      createdAt: "2026-01-25T14:15:00.000Z"
+    },
+    {
+      id: "aid-003",
+      aidType: "KELOMPOK",
+      targetName: "Kelompok Josenan",
+      receivedMonth: "Maret",
+      receivedYear: 2026,
+      aidName: "Pengadaan Sarana Sound System & Karpet Aula",
+      centralAidAmount: 18000000,
+      realizationUsage: "Pembelian 2 unit active speaker wireless, 4 unit mic wireless UHF, dan karpet masjid tebal turki 4 roll.",
+      budgetPlanAmount: 20500000,
+      congregationCharityAmount: 3200000,
+      reporterName: "Fahmi Maulana Dwi, S.Kom.",
+      createdAt: "2026-03-05T09:00:00.000Z"
+    },
+    {
+      id: "aid-004",
+      aidType: "DESA",
+      targetName: "Desa Mentawai",
+      receivedMonth: "Maret",
+      receivedYear: 2026,
+      aidName: "Penyaluran Bantuan Sarana Pembelajaran Santri",
+      centralAidAmount: 25000000,
+      realizationUsage: "Pengadaan 15 meja belajar santri, rak kitab kayu jati, dan perlengkapan perpustakaan mini.",
+      budgetPlanAmount: 28000000,
+      congregationCharityAmount: 4500000,
+      reporterName: "Fahmi Maulana Dwi, S.Kom.",
+      createdAt: "2026-03-12T08:00:00.000Z"
+    }
+  ]
 };
 
 // Helper to sanitize and normalize asset records strictly to 'Tanah', 'Kendaraan', 'Bangunan'
@@ -1284,6 +1350,7 @@ export function loadLocalDatabase(): DatabaseStore {
         syncHistory: parsed.syncHistory || DEFAULT_DATABASE.syncHistory,
         auditLogs: parsed.auditLogs || DEFAULT_DATABASE.auditLogs,
         donations: parsed.donations || [],
+        aidReports: Array.isArray(parsed.aidReports) ? parsed.aidReports : DEFAULT_DATABASE.aidReports,
         meetings: (parsed.meetings || []).map((m: any) => ({
           ...m,
           description: Array.isArray(m.description) ? m.description : (m.description ? [m.description] : []),
